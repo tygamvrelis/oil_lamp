@@ -61,8 +61,7 @@ void MX_FREERTOS_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-extern osSemaphoreId I2C1SemHandle;
-extern osSemaphoreId I2C2SemHandle;
+
 /* USER CODE END 0 */
 
 /**
@@ -99,10 +98,7 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
   init_imu(&imu_base, &hi2c1);
-  attachSemaphore(&imu_base, I2C1SemHandle);
-
   init_imu(&imu_lamp, &hi2c2);
-  attachSemaphore(&imu_base, I2C2SemHandle);
   /* USER CODE END 2 */
 
   /* Call init function for freertos objects (in freertos.c) */

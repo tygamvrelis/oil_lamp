@@ -25,8 +25,10 @@
 #include "cmsis_os.h"
 
 /* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */     
+/* USER CODE BEGIN Includes */
+#include <string.h>
 #include "usart.h"
+#include "App/table.h"
 #include "App/sensing.h"
 /* USER CODE END Includes */
 
@@ -61,10 +63,16 @@ osStaticThreadDef_t ImuBaseTaskControlBlock;
 osThreadId ImuLampHandle;
 uint32_t ImuLampTaskBuffer[ 128 ];
 osStaticThreadDef_t ImuLampTaskControlBlock;
+osMutexId TableLockHandle;
+osStaticMutexDef_t TableLockControlBlock;
 osSemaphoreId I2C2SemHandle;
 osStaticSemaphoreDef_t I2C2SemControlBlock;
 osSemaphoreId I2C1SemHandle;
 osStaticSemaphoreDef_t I2C1SemControlBlock;
+osSemaphoreId TxSemHandle;
+osStaticSemaphoreDef_t TxSemControlBlock;
+osSemaphoreId RxSemHandle;
+osStaticSemaphoreDef_t RxSemControlBlock;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -104,6 +112,11 @@ void MX_FREERTOS_Init(void) {
        
   /* USER CODE END Init */
 
+  /* Create the mutex(es) */
+  /* definition and creation of TableLock */
+  osMutexStaticDef(TableLock, &TableLockControlBlock);
+  TableLockHandle = osMutexCreate(osMutex(TableLock));
+
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
   /* USER CODE END RTOS_MUTEX */
@@ -116,6 +129,14 @@ void MX_FREERTOS_Init(void) {
   /* definition and creation of I2C1Sem */
   osSemaphoreStaticDef(I2C1Sem, &I2C1SemControlBlock);
   I2C1SemHandle = osSemaphoreCreate(osSemaphore(I2C1Sem), 1);
+
+  /* definition and creation of TxSem */
+  osSemaphoreStaticDef(TxSem, &TxSemControlBlock);
+  TxSemHandle = osSemaphoreCreate(osSemaphore(TxSem), 1);
+
+  /* definition and creation of RxSem */
+  osSemaphoreStaticDef(RxSem, &RxSemControlBlock);
+  RxSemHandle = osSemaphoreCreate(osSemaphore(RxSem), 1);
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
@@ -183,13 +204,29 @@ void StartTxTask(void const * argument)
   /* USER CODE BEGIN StartTxTask */
 	// For packet timing management
 	TickType_t xLastWakeTime = xTaskGetTickCount();
-	uint8_t buf[2] = {};
+	uint8_t buf[MAX_TABLE_IDX * sizeof(float) + 1] = {0};
+	buf[MAX_TABLE_IDX  * sizeof(float)] = '\n';
+	float tmp;
 	for (;;)
 	{
 		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(TX_PERIOD_MS));
 
-		// TODO: pack data and transmit
-		HAL_UART_Transmit_DMA(&huart2, buf, sizeof(buf));
+		// Pack data
+		for (uint8_t i = 0; i < MAX_TABLE_IDX; ++i)
+		{
+			read_table(i, &tmp);
+			memcpy(&buf[i * sizeof(float)], (uint8_t*)&tmp, sizeof(float));
+		}
+
+		// Send
+        if (HAL_UART_Transmit_DMA(&huart2, buf, sizeof(buf)) != HAL_OK)
+        {
+            HAL_UART_AbortTransmit_IT(&huart2);
+        }
+        else
+        {
+        	xSemaphoreTake(TxSemHandle, pdMS_TO_TICKS(1));
+        }
 	}
   /* USER CODE END StartTxTask */
 }
@@ -204,8 +241,10 @@ void StartTxTask(void const * argument)
 void StartImuBaseTask(void const * argument)
 {
   /* USER CODE BEGIN StartImuBaseTask */
-	cFilt_t filt;
-	filt.alpha = 0.98;
+	attachSemaphore(&imu_base, I2C1SemHandle);
+	cFilt_t filt_o, filt_i;
+	filt_o.alpha = 0.98;
+	filt_i.alpha = 0.98;
     TickType_t xLastWakeTime;
     xLastWakeTime = xTaskGetTickCount();
 	osDelay(TX_PERIOD_MS - 2);
@@ -215,13 +254,26 @@ void StartImuBaseTask(void const * argument)
 
         accelReadIT(&imu_base);
         gyroReadIT(&imu_base);
-        float theta_base = cFilt_update(
-			&filt,
+
+        // Estimate outer gimbal angle
+        float theta_o = cFilt_update(
+			&filt_o,
 			imu_base.vy,
 			imu_base.ax,
 			imu_base.az,
 			IMU_CYCLE_MS
 		);
+        write_table(BASE_ANGLE_OUTER, theta_o);
+
+        // Estimate inner gimbal angle
+        float theta_i = cFilt_update(
+			&filt_i,
+			imu_base.vx,
+			imu_base.ay,
+			imu_base.az,
+			IMU_CYCLE_MS
+		);
+        write_table(BASE_ANGLE_INNER, theta_i);
 	}
   /* USER CODE END StartImuBaseTask */
 }
@@ -236,8 +288,10 @@ void StartImuBaseTask(void const * argument)
 void StartImuLampTask(void const * argument)
 {
   /* USER CODE BEGIN StartImuLampTask */
-	cFilt_t filt;
-	filt.alpha = 0.98;
+	attachSemaphore(&imu_lamp, I2C2SemHandle);
+	cFilt_t filt_o, filt_i;
+	filt_o.alpha = 0.98;
+	filt_i.alpha = 0.98;
     TickType_t xLastWakeTime;
     xLastWakeTime = xTaskGetTickCount();
     osDelay(TX_PERIOD_MS - 2);
@@ -247,20 +301,71 @@ void StartImuLampTask(void const * argument)
 
         accelReadIT(&imu_lamp);
         gyroReadIT(&imu_lamp);
-        float theta_lamp = cFilt_update(
-			&filt,
+
+        // Estimate outer gimbal angle
+        float theta_o = cFilt_update(
+			&filt_o,
 			imu_lamp.vy,
 			imu_lamp.ax,
 			imu_lamp.az,
 			IMU_CYCLE_MS
 		);
+        write_table(LAMP_ANGLE_OUTER, theta_o);
+
+        // Estimate inner gimbal angle
+        float theta_i = cFilt_update(
+			&filt_i,
+			imu_lamp.vx,
+			imu_lamp.ay,
+			imu_lamp.az,
+			IMU_CYCLE_MS
+		);
+        write_table(LAMP_ANGLE_OUTER, theta_i);
     }
   /* USER CODE END StartImuLampTask */
 }
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
-     
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart){
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    if (huart->Instance == USART2 && TxSemHandle != NULL){
+    	xSemaphoreGiveFromISR(TxSemHandle, &xHigherPriorityTaskWoken);
+    }
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    if (huart->Instance == USART2 && RxSemHandle != NULL){
+    	xSemaphoreGiveFromISR(RxSemHandle, &xHigherPriorityTaskWoken);
+    }
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+}
+
+void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c){
+	// Returns the semaphore taken after non-blocking reception ends
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+	if (hi2c->Instance == I2C2){
+    	xSemaphoreGiveFromISR(I2C2SemHandle, &xHigherPriorityTaskWoken);
+	}
+	else if (hi2c->Instance == I2C1){
+    	xSemaphoreGiveFromISR(I2C1SemHandle, &xHigherPriorityTaskWoken);
+	}
+	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+}
+
+void HAL_I2C_MemTxCpltCallback(I2C_HandleTypeDef *hi2c){
+	// Returns the semaphore taken after non-blocking transmission ends
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+	if (hi2c->Instance == I2C2){
+    	xSemaphoreGiveFromISR(I2C2SemHandle, &xHigherPriorityTaskWoken);
+	}
+	else if (hi2c->Instance == I2C1){
+    	xSemaphoreGiveFromISR(I2C1SemHandle, &xHigherPriorityTaskWoken);
+	}
+	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+}
 /* USER CODE END Application */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

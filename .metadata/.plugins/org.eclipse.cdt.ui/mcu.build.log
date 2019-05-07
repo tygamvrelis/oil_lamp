@@ -1,6 +1,6 @@
-22:58:18 **** Incremental Build of configuration Debug for project mcu ****
+23:56:00 **** Incremental Build of configuration Debug for project mcu ****
 make -j8 all 
 make: Nothing to be done for 'all'.
 
-22:58:20 Build Finished (took 1s.525ms)
+23:56:01 Build Finished (took 1s.421ms)
 
