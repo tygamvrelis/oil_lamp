@@ -285,16 +285,16 @@ void generateClocks(
         GPIO_TypeDef* sclPort;
     };
 
-    static struct I2C_Module i2c2module = {
-		&hi2c2,
+    static struct I2C_Module i2c1module = {
+		&hi2c1,
 		IMU_BASE_SDA_Pin,
 		IMU_BASE_SDA_GPIO_Port,
 		IMU_BASE_SCL_Pin,
 		IMU_BASE_SCL_GPIO_Port
     };
 
-    static struct I2C_Module i2c1module = {
-		&hi2c1,
+    static struct I2C_Module i2c2module = {
+		&hi2c2,
 		IMU_LAMP_SDA_Pin,
 		IMU_LAMP_SDA_GPIO_Port,
 		IMU_LAMP_SCL_Pin,
