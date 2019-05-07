@@ -59,10 +59,10 @@ bool init_imu(MPU6050_t* imu, I2C_HandleTypeDef* hi2c)
 	return status == 1;
 }
 
-float cFilt_update(cFilt_t* filt, float v1, float a2, float a3, unsigned int dt)
+float cFilt_update(cFilt_t* filt, float v1, float a2, float a3, float dt)
 {
-	float a_term = (filt->alpha - 1.0) * atan2f(-1.0 * a2, a3);
-	float v_term = filt->alpha * (filt->last_theta + v1 * dt);
+	float a_term = (1.0 - filt->alpha) * atan2f(a2, a3) * 180.0 / M_PI;
+	float v_term = filt->alpha * (filt->last_theta + v1 * dt / 1000.0);
 	filt->last_theta = v_term + a_term;
 	return filt->last_theta;
 }

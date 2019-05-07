@@ -54,3 +54,150 @@ make: Nothing to be done for 'all'.
 23:56:00 **** Incremental Build of configuration Debug for project mcu ****
 make -j8 all 
 make: Nothing to be done for 'all'.
+00:18:16 **** Incremental Build of configuration Debug for project mcu ****
+make -j8 all 
+Building file: ../Src/MPU6050/MPU6050.c
+Invoking: MCU GCC Compiler
+D:\Users\Tyler\Documents\GitHub\oil_lamp\mcu\Debug
+arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 '-D__weak=__attribute__((weak))' '-D__packed=__attribute__((__packed__))' -DUSE_HAL_DRIVER -DSTM32F446xx -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Inc" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/STM32F4xx_HAL_Driver/Inc" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Middlewares/Third_Party/FreeRTOS/Source/include" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/CMSIS/Device/ST/STM32F4xx/Include" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/CMSIS/Include"  -Og -g3 -Wall -fmessage-length=0 -ffunction-sections -c -fmessage-length=0 -MMD -MP -MF"Src/MPU6050/MPU6050.d" -MT"Src/MPU6050/MPU6050.o" -o "Src/MPU6050/MPU6050.o" "../Src/MPU6050/MPU6050.c"
+Finished building: ../Src/MPU6050/MPU6050.c
+ 
+Building target: mcu.elf
+Invoking: MCU GCC Linker
+arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -specs=nosys.specs -specs=nano.specs -T"../STM32F446RETx_FLASH.ld" -Wl,-Map=output.map -Wl,--gc-sections -o "mcu.elf" @"objects.list"   -lm
+Finished building target: mcu.elf
+ 
+make --no-print-directory post-build
+Generating hex and Printing size information:
+arm-none-eabi-objcopy -O ihex "mcu.elf" "mcu.hex"
+arm-none-eabi-size "mcu.elf"
+   text	   data	    bss	    dec	    hex	filename
+  26956	     64	   5816	  32836	   8044	mcu.elf
+ 
+00:23:29 **** Incremental Build of configuration Debug for project mcu ****
+make -j8 all 
+make: Nothing to be done for 'all'.
+00:23:51 **** Incremental Build of configuration Debug for project mcu ****
+make -j8 all 
+make: Nothing to be done for 'all'.
+00:24:52 **** Incremental Build of configuration Debug for project mcu ****
+make -j8 all 
+Building file: ../Src/MPU6050/MPU6050.c
+Invoking: MCU GCC Compiler
+D:\Users\Tyler\Documents\GitHub\oil_lamp\mcu\Debug
+arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 '-D__weak=__attribute__((weak))' '-D__packed=__attribute__((__packed__))' -DUSE_HAL_DRIVER -DSTM32F446xx -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Inc" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/STM32F4xx_HAL_Driver/Inc" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Middlewares/Third_Party/FreeRTOS/Source/include" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/CMSIS/Device/ST/STM32F4xx/Include" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/CMSIS/Include"  -Og -g3 -Wall -fmessage-length=0 -ffunction-sections -c -fmessage-length=0 -MMD -MP -MF"Src/MPU6050/MPU6050.d" -MT"Src/MPU6050/MPU6050.o" -o "Src/MPU6050/MPU6050.o" "../Src/MPU6050/MPU6050.c"
+Finished building: ../Src/MPU6050/MPU6050.c
+ 
+Building target: mcu.elf
+Invoking: MCU GCC Linker
+arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -specs=nosys.specs -specs=nano.specs -T"../STM32F446RETx_FLASH.ld" -Wl,-Map=output.map -Wl,--gc-sections -o "mcu.elf" @"objects.list"   -lm
+Finished building target: mcu.elf
+ 
+make --no-print-directory post-build
+Generating hex and Printing size information:
+arm-none-eabi-objcopy -O ihex "mcu.elf" "mcu.hex"
+arm-none-eabi-size "mcu.elf"
+   text	   data	    bss	    dec	    hex	filename
+  26956	     64	   5816	  32836	   8044	mcu.elf
+ 
+00:36:19 **** Incremental Build of configuration Debug for project mcu ****
+make -j8 all 
+Building file: ../Src/App/sensing.c
+Building file: ../Src/freertos.c
+Invoking: MCU GCC Compiler
+Invoking: MCU GCC Compiler
+D:\Users\Tyler\Documents\GitHub\oil_lamp\mcu\Debug
+arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 '-D__weak=__attribute__((weak))' '-D__packed=__attribute__((__packed__))' -DUSE_HAL_DRIVER -DSTM32F446xx -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Inc" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/STM32F4xx_HAL_Driver/Inc" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Middlewares/Third_Party/FreeRTOS/Source/include" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/CMSIS/Device/ST/STM32F4xx/Include" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/CMSIS/Include"  -Og -g3 -Wall -fmessage-length=0 -ffunction-sections -c -fmessage-length=0 -MMD -MP -MF"Src/App/sensing.d" -MT"Src/App/sensing.o" -o "Src/App/sensing.o" "../Src/App/sensing.c"
+D:\Users\Tyler\Documents\GitHub\oil_lamp\mcu\Debug
+arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 '-D__weak=__attribute__((weak))' '-D__packed=__attribute__((__packed__))' -DUSE_HAL_DRIVER -DSTM32F446xx -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Inc" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/STM32F4xx_HAL_Driver/Inc" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Middlewares/Third_Party/FreeRTOS/Source/include" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/CMSIS/Device/ST/STM32F4xx/Include" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/CMSIS/Include"  -Og -g3 -Wall -fmessage-length=0 -ffunction-sections -c -fmessage-length=0 -MMD -MP -MF"Src/freertos.d" -MT"Src/freertos.o" -o "Src/freertos.o" "../Src/freertos.c"
+Finished building: ../Src/App/sensing.c
+ 
+Finished building: ../Src/freertos.c
+ 
+Building target: mcu.elf
+Invoking: MCU GCC Linker
+arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -specs=nosys.specs -specs=nano.specs -T"../STM32F446RETx_FLASH.ld" -Wl,-Map=output.map -Wl,--gc-sections -o "mcu.elf" @"objects.list"   -lm
+Finished building target: mcu.elf
+ 
+make --no-print-directory post-build
+Generating hex and Printing size information:
+arm-none-eabi-objcopy -O ihex "mcu.elf" "mcu.hex"
+arm-none-eabi-size "mcu.elf"
+   text	   data	    bss	    dec	    hex	filename
+  26996	     64	   5816	  32876	   806c	mcu.elf
+ 
+00:38:47 **** Incremental Build of configuration Debug for project mcu ****
+make -j8 all 
+Building file: ../Src/App/sensing.c
+Invoking: MCU GCC Compiler
+D:\Users\Tyler\Documents\GitHub\oil_lamp\mcu\Debug
+arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 '-D__weak=__attribute__((weak))' '-D__packed=__attribute__((__packed__))' -DUSE_HAL_DRIVER -DSTM32F446xx -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Inc" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/STM32F4xx_HAL_Driver/Inc" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Middlewares/Third_Party/FreeRTOS/Source/include" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/CMSIS/Device/ST/STM32F4xx/Include" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/CMSIS/Include"  -Og -g3 -Wall -fmessage-length=0 -ffunction-sections -c -fmessage-length=0 -MMD -MP -MF"Src/App/sensing.d" -MT"Src/App/sensing.o" -o "Src/App/sensing.o" "../Src/App/sensing.c"
+Finished building: ../Src/App/sensing.c
+ 
+Building target: mcu.elf
+Invoking: MCU GCC Linker
+arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -specs=nosys.specs -specs=nano.specs -T"../STM32F446RETx_FLASH.ld" -Wl,-Map=output.map -Wl,--gc-sections -o "mcu.elf" @"objects.list"   -lm
+Finished building target: mcu.elf
+ 
+make --no-print-directory post-build
+Generating hex and Printing size information:
+arm-none-eabi-objcopy -O ihex "mcu.elf" "mcu.hex"
+arm-none-eabi-size "mcu.elf"
+   text	   data	    bss	    dec	    hex	filename
+  26996	     64	   5816	  32876	   806c	mcu.elf
+ 
+00:44:18 **** Incremental Build of configuration Debug for project mcu ****
+make -j8 all 
+Building file: ../Src/freertos.c
+Invoking: MCU GCC Compiler
+D:\Users\Tyler\Documents\GitHub\oil_lamp\mcu\Debug
+arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 '-D__weak=__attribute__((weak))' '-D__packed=__attribute__((__packed__))' -DUSE_HAL_DRIVER -DSTM32F446xx -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Inc" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/STM32F4xx_HAL_Driver/Inc" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Middlewares/Third_Party/FreeRTOS/Source/include" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/CMSIS/Device/ST/STM32F4xx/Include" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/CMSIS/Include"  -Og -g3 -Wall -fmessage-length=0 -ffunction-sections -c -fmessage-length=0 -MMD -MP -MF"Src/freertos.d" -MT"Src/freertos.o" -o "Src/freertos.o" "../Src/freertos.c"
+Finished building: ../Src/freertos.c
+ 
+Building target: mcu.elf
+Invoking: MCU GCC Linker
+arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -specs=nosys.specs -specs=nano.specs -T"../STM32F446RETx_FLASH.ld" -Wl,-Map=output.map -Wl,--gc-sections -o "mcu.elf" @"objects.list"   -lm
+Finished building target: mcu.elf
+ 
+make --no-print-directory post-build
+Generating hex and Printing size information:
+arm-none-eabi-objcopy -O ihex "mcu.elf" "mcu.hex"
+arm-none-eabi-size "mcu.elf"
+   text	   data	    bss	    dec	    hex	filename
+  26996	     64	   5816	  32876	   806c	mcu.elf
+ 
+00:46:20 **** Incremental Build of configuration Debug for project mcu ****
+make -j8 all 
+Building file: ../Src/App/sensing.c
+Building file: ../Src/freertos.c
+Invoking: MCU GCC Compiler
+Building file: ../Src/main.c
+Invoking: MCU GCC Compiler
+D:\Users\Tyler\Documents\GitHub\oil_lamp\mcu\Debug
+arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 '-D__weak=__attribute__((weak))' '-D__packed=__attribute__((__packed__))' -DUSE_HAL_DRIVER -DSTM32F446xx -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Inc" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/STM32F4xx_HAL_Driver/Inc" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Middlewares/Third_Party/FreeRTOS/Source/include" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/CMSIS/Device/ST/STM32F4xx/Include" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/CMSIS/Include"  -Og -g3 -Wall -fmessage-length=0 -ffunction-sections -c -fmessage-length=0 -MMD -MP -MF"Src/App/sensing.d" -MT"Src/App/sensing.o" -o "Src/App/sensing.o" "../Src/App/sensing.c"
+Invoking: MCU GCC Compiler
+D:\Users\Tyler\Documents\GitHub\oil_lamp\mcu\Debug
+arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 '-D__weak=__attribute__((weak))' '-D__packed=__attribute__((__packed__))' -DUSE_HAL_DRIVER -DSTM32F446xx -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Inc" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/STM32F4xx_HAL_Driver/Inc" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Middlewares/Third_Party/FreeRTOS/Source/include" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/CMSIS/Device/ST/STM32F4xx/Include" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/CMSIS/Include"  -Og -g3 -Wall -fmessage-length=0 -ffunction-sections -c -fmessage-length=0 -MMD -MP -MF"Src/freertos.d" -MT"Src/freertos.o" -o "Src/freertos.o" "../Src/freertos.c"
+D:\Users\Tyler\Documents\GitHub\oil_lamp\mcu\Debug
+arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 '-D__weak=__attribute__((weak))' '-D__packed=__attribute__((__packed__))' -DUSE_HAL_DRIVER -DSTM32F446xx -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Inc" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/STM32F4xx_HAL_Driver/Inc" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Middlewares/Third_Party/FreeRTOS/Source/include" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/CMSIS/Device/ST/STM32F4xx/Include" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/CMSIS/Include"  -Og -g3 -Wall -fmessage-length=0 -ffunction-sections -c -fmessage-length=0 -MMD -MP -MF"Src/main.d" -MT"Src/main.o" -o "Src/main.o" "../Src/main.c"
+Finished building: ../Src/App/sensing.c
+ 
+Finished building: ../Src/main.c
+Finished building: ../Src/freertos.c
+ 
+ 
+Building target: mcu.elf
+Invoking: MCU GCC Linker
+arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -specs=nosys.specs -specs=nano.specs -T"../STM32F446RETx_FLASH.ld" -Wl,-Map=output.map -Wl,--gc-sections -o "mcu.elf" @"objects.list"   -lm
+Finished building target: mcu.elf
+ 
+make --no-print-directory post-build
+Generating hex and Printing size information:
+arm-none-eabi-objcopy -O ihex "mcu.elf" "mcu.hex"
+arm-none-eabi-size "mcu.elf"
+   text	   data	    bss	    dec	    hex	filename
+  27068	     64	   5816	  32948	   80b4	mcu.elf
+ 
+00:49:10 **** Incremental Build of configuration Debug for project mcu ****
+make -j8 all 
+make: Nothing to be done for 'all'.

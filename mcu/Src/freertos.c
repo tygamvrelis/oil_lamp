@@ -320,7 +320,7 @@ void StartImuLampTask(void const * argument)
 			imu_lamp.az,
 			IMU_CYCLE_MS
 		);
-        write_table(LAMP_ANGLE_OUTER, theta_i);
+        write_table(LAMP_ANGLE_INNER, theta_i);
     }
   /* USER CODE END StartImuLampTask */
 }

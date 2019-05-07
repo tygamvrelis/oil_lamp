@@ -91,36 +91,14 @@ int MPU6050Init(MPU6050_t* myMPU, I2C_HandleTypeDef* hi2c){
     myMPU->vy = NAN;
     myMPU->vx = NAN;
 
-    /********** Check that MPU6050 is connected **********/
     uint8_t buff[1];
 
-    // Check for bus communication essentially. If any function should fail and issue an early return, it would most likely
-    // be this one.
-    if(HAL_I2C_Mem_Read(myMPU->hi2c, MPU6050_ACCEL_AND_GYRO_ADDR, WHO_AM_I,
-    I2C_MEMADD_SIZE_8BIT, buff, 1, 100) != HAL_OK){
-        return -1;
-    }
-
-    // Check that the WHO_AM_I register is 0x71
-    if(buff[0] != 0x71){
-        return -2;
-    }
-
-    /********** Configure accelerometer and gyroscope **********/
     // Use the best available clock source
     uint8_t dataToWrite = 0x01;
     if(HAL_I2C_Mem_Write(myMPU->hi2c, MPU6050_ACCEL_AND_GYRO_ADDR, PWR_MGMT_1,
             I2C_MEMADD_SIZE_8BIT, &dataToWrite, sizeof(dataToWrite), 100)
             != HAL_OK){
-        return -3;
-    }
-
-    // Enable I2C master interface module
-    dataToWrite = 0x20;
-    if(HAL_I2C_Mem_Write(myMPU->hi2c, MPU6050_ACCEL_AND_GYRO_ADDR, USER_CTRL,
-            I2C_MEMADD_SIZE_8BIT, &dataToWrite, sizeof(dataToWrite), 100)
-            != HAL_OK){
-        return -4;
+        return -1;
     }
 
     // Set I2C module to use 400 kHz speed (pg. 19 of register map)
@@ -128,7 +106,19 @@ int MPU6050Init(MPU6050_t* myMPU, I2C_HandleTypeDef* hi2c){
     if(HAL_I2C_Mem_Write(myMPU->hi2c, MPU6050_ACCEL_AND_GYRO_ADDR, I2C_MST_CTRL,
             I2C_MEMADD_SIZE_8BIT, &dataToWrite, sizeof(dataToWrite), 100)
             != HAL_OK){
-        return -5;
+        return -2;
+    }
+
+    // Check for bus communication essentially. If any function should fail and issue an early return, it would most likely
+    // be this one.
+    if(HAL_I2C_Mem_Read(myMPU->hi2c, MPU6050_ACCEL_AND_GYRO_ADDR, WHO_AM_I,
+    I2C_MEMADD_SIZE_8BIT, buff, 1, 100) != HAL_OK){
+        return -3;
+    }
+
+    // Check that the WHO_AM_I register is 0x68
+    if(buff[0] != MPU6050_ACCEL_AND_GYRO_ADDR >> 1){
+        return -4;
     }
 
     // Force accelerometer and gyroscope to ON
@@ -136,7 +126,7 @@ int MPU6050Init(MPU6050_t* myMPU, I2C_HandleTypeDef* hi2c){
     if(HAL_I2C_Mem_Write(myMPU->hi2c, MPU6050_ACCEL_AND_GYRO_ADDR, PWR_MGMT_2,
             I2C_MEMADD_SIZE_8BIT, &dataToWrite, sizeof(dataToWrite), 100)
             != HAL_OK){
-        return -6;
+        return -5;
     }
 
     /* Return success */

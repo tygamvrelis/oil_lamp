@@ -50,9 +50,9 @@ bool init_imu(MPU6050_t* imu, I2C_HandleTypeDef* hi2c);
  * @param v1 Angular velocity about the axis of rotation
  * @param a2 Acceleration in the 1-2 plane, along coordinate 2
  * @param a3 Acceleration along the 3rd coordinate
- * @param dt Time elapsed between updates
+ * @param dt Time elapsed between updates, in milliseconds
  */
-float cFilt_update(cFilt_t* filt, float v1, float a2, float a3, unsigned int dt);
+float cFilt_update(cFilt_t* filt, float v1, float a2, float a3, float dt);
 
 /**
  * @}
