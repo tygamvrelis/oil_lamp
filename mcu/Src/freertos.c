@@ -27,6 +27,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */     
 #include "usart.h"
+#include "App/sensing.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -182,9 +183,9 @@ void StartTxTask(void const * argument)
   /* USER CODE BEGIN StartTxTask */
 	// For packet timing management
 	TickType_t xLastWakeTime = xTaskGetTickCount();
-	TickType_t TX_PERIOD_MS = 10;
 	uint8_t buf[2] = {};
-	for (;;) {
+	for (;;)
+	{
 		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(TX_PERIOD_MS));
 
 		// TODO: pack data and transmit
@@ -203,11 +204,25 @@ void StartTxTask(void const * argument)
 void StartImuBaseTask(void const * argument)
 {
   /* USER CODE BEGIN StartImuBaseTask */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
+	cFilt_t filt;
+	filt.alpha = 0.98;
+    TickType_t xLastWakeTime;
+    xLastWakeTime = xTaskGetTickCount();
+	osDelay(TX_PERIOD_MS - 2);
+	for(;;)
+	{
+		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(IMU_CYCLE_MS));
+
+        accelReadIT(&imu_base);
+        gyroReadIT(&imu_base);
+        float theta_base = cFilt_update(
+			&filt,
+			imu_base.vy,
+			imu_base.ax,
+			imu_base.az,
+			IMU_CYCLE_MS
+		);
+	}
   /* USER CODE END StartImuBaseTask */
 }
 
@@ -221,11 +236,25 @@ void StartImuBaseTask(void const * argument)
 void StartImuLampTask(void const * argument)
 {
   /* USER CODE BEGIN StartImuLampTask */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
+	cFilt_t filt;
+	filt.alpha = 0.98;
+    TickType_t xLastWakeTime;
+    xLastWakeTime = xTaskGetTickCount();
+    osDelay(TX_PERIOD_MS - 2);
+    for(;;)
+    {
+        vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(IMU_CYCLE_MS));
+
+        accelReadIT(&imu_lamp);
+        gyroReadIT(&imu_lamp);
+        float theta_lamp = cFilt_update(
+			&filt,
+			imu_lamp.vy,
+			imu_lamp.ax,
+			imu_lamp.az,
+			IMU_CYCLE_MS
+		);
+    }
   /* USER CODE END StartImuLampTask */
 }
 

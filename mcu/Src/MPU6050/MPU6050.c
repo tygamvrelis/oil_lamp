@@ -8,7 +8,7 @@
  */
 
 /********************************** Includes *********************************/
-#include "MPU6050.h"
+#include "MPU6050/MPU6050.h"
 
 
 
@@ -74,12 +74,6 @@ static const float MPU6050_GYRO_FULL_SCALE = 250.0;
 
 
 /********************************* Functions *********************************/
-void generateClocks(
-        I2C_HandleTypeDef* hi2c,
-        uint8_t numClocks,
-        uint8_t sendStopBits
-);
-
 /**
  * @brief  Initializes the MPU6050 sensor by writing various settings to its
  *         registers, and reading a few of them for verification
@@ -161,19 +155,23 @@ void resetIMUBlocking(MPU6050_t* myMPU){
             I2C_MEMADD_SIZE_8BIT, &dataToWrite, sizeof(dataToWrite), 100);
 }
 
-int accelReadDMA(MPU6050_t* myMPU, osSemaphoreId sem){
-    uint8_t mpu_buff[6];
-    int16_t temp;
+void attachSemaphore(MPU6050_t* myMPU, osSemaphoreId sem)
+{
+	myMPU->sem = sem;
+}
 
-    if(HAL_I2C_Mem_Read_DMA(myMPU->hi2c, MPU6050_ACCEL_AND_GYRO_ADDR,
+int accelReadIT(MPU6050_t* myMPU){
+    uint8_t mpu_buff[6];
+    if(HAL_I2C_Mem_Read_IT(myMPU->hi2c, MPU6050_ACCEL_AND_GYRO_ADDR,
             MPU6050_ACCEL_X_ADDR_H,
             I2C_MEMADD_SIZE_8BIT, mpu_buff, 6) != HAL_OK){
+    	generateClocks(myMPU->hi2c, 1, 1);
         myMPU->ax = NAN;
         myMPU->ay = NAN;
         myMPU->az = NAN;
         return -1;
     }
-    if(xSemaphoreTake(sem, MAX_SEM_WAIT) != pdTRUE){
+    if(xSemaphoreTake(myMPU->sem, MAX_SEM_WAIT) != pdTRUE){
         myMPU->ax = NAN;
         myMPU->ay = NAN;
         myMPU->az = NAN;
@@ -181,8 +179,8 @@ int accelReadDMA(MPU6050_t* myMPU, osSemaphoreId sem){
     }
 
     // Process data; scale to physical units
-    temp = (mpu_buff[0] << 8 | mpu_buff[1]);
-    myMPU->ax = (temp * MPU6050_ACCEL_FULL_SCALE / (32767.0)); // Scale to physical units
+    int16_t temp = (mpu_buff[0] << 8 | mpu_buff[1]);
+    myMPU->ax = (temp * MPU6050_ACCEL_FULL_SCALE / (32767.0));
 
     temp = (mpu_buff[2] << 8 | mpu_buff[3]);
     myMPU->ay = (temp * MPU6050_ACCEL_FULL_SCALE / (32767.0));
@@ -193,27 +191,26 @@ int accelReadDMA(MPU6050_t* myMPU, osSemaphoreId sem){
     return 1;
 }
 
-int gyroReadDMA(MPU6050_t* myMPU, osSemaphoreId sem){
+int gyroReadIT(MPU6050_t* myMPU){
     uint8_t mpu_buff[6];
-    int16_t temp;
-
-    if(HAL_I2C_Mem_Read_DMA(myMPU->hi2c, MPU6050_ACCEL_AND_GYRO_ADDR,
+    if(HAL_I2C_Mem_Read_IT(myMPU->hi2c, MPU6050_ACCEL_AND_GYRO_ADDR,
             MPU6050_GYRO_X_ADDR_H,
             I2C_MEMADD_SIZE_8BIT, mpu_buff, 6) != HAL_OK){
+    	generateClocks(myMPU->hi2c, 1, 1);
         myMPU->vx = NAN;
         myMPU->vy = NAN;
         myMPU->vz = NAN;
         return -1;
     }
-    if(xSemaphoreTake(sem, MAX_SEM_WAIT) != pdTRUE){
+    if(xSemaphoreTake(myMPU->sem, MAX_SEM_WAIT) != pdTRUE){
         myMPU->vx = NAN;
         myMPU->vy = NAN;
         myMPU->vz = NAN;
-        return -1;
+        return -2;
     }
 
     // Process data; scale to physical units
-    temp = (mpu_buff[0] << 8 | mpu_buff[1]);
+    int16_t temp = (mpu_buff[0] << 8 | mpu_buff[1]);
     myMPU->vx = (temp / (32767.0) * MPU6050_GYRO_FULL_SCALE);
 
     temp = (mpu_buff[2] << 8 | mpu_buff[3]);
@@ -298,20 +295,20 @@ void generateClocks(
         GPIO_TypeDef* sclPort;
     };
 
-    static struct I2C_Module i2c3module = {
-            &hi2c3,
-            MPU_SDA_Pin,
-            MPU_SDA_GPIO_Port,
-            MPU_SCL_Pin,
-            MPU_SCL_GPIO_Port
+    static struct I2C_Module i2c2module = {
+		&hi2c2,
+		IMU_BASE_SDA_Pin,
+		IMU_BASE_SDA_GPIO_Port,
+		IMU_BASE_SCL_Pin,
+		IMU_BASE_SCL_GPIO_Port
     };
 
     static struct I2C_Module i2c1module = {
-            &hi2c1,
-            MAG_SDA_Pin,
-            MAG_SDA_GPIO_Port,
-            MAG_SCL_Pin,
-            MAG_SCL_GPIO_Port
+		&hi2c1,
+		IMU_LAMP_SDA_Pin,
+		IMU_LAMP_SDA_GPIO_Port,
+		IMU_LAMP_SCL_Pin,
+		IMU_LAMP_SCL_GPIO_Port,
     };
 
     struct I2C_Module* i2c = NULL;
@@ -319,15 +316,12 @@ void generateClocks(
         i2c = &i2c1module;
     }
     else{
-        i2c = &i2c3module;
+        i2c = &i2c2module;
     }
 
     static uint8_t timeout = 1;
-
     GPIO_InitTypeDef GPIO_InitStructure;
-
     I2C_HandleTypeDef* handler = NULL;
-
     handler = i2c->instance;
 
     // 1. Clear PE bit.

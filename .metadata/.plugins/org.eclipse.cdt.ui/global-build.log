@@ -1,23 +1,5 @@
-23:53:14 **** Incremental Build of configuration Debug for project mcu ****
+22:39:51 **** Incremental Build of configuration Debug for project mcu ****
 make all 
-Building file: ../Src/freertos.c
-Invoking: MCU GCC Compiler
-D:\Users\Tyler\Documents\GitHub\oil_lamp\mcu\Debug
-arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 '-D__weak=__attribute__((weak))' '-D__packed=__attribute__((__packed__))' -DUSE_HAL_DRIVER -DSTM32F446xx -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Inc" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/STM32F4xx_HAL_Driver/Inc" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Middlewares/Third_Party/FreeRTOS/Source/include" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/CMSIS/Device/ST/STM32F4xx/Include" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/CMSIS/Include"  -Og -g3 -Wall -fmessage-length=0 -ffunction-sections -c -fmessage-length=0 -MMD -MP -MF"Src/freertos.d" -MT"Src/freertos.o" -o "Src/freertos.o" "../Src/freertos.c"
-Finished building: ../Src/freertos.c
- 
-Building file: ../Src/gpio.c
-Invoking: MCU GCC Compiler
-D:\Users\Tyler\Documents\GitHub\oil_lamp\mcu\Debug
-arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 '-D__weak=__attribute__((weak))' '-D__packed=__attribute__((__packed__))' -DUSE_HAL_DRIVER -DSTM32F446xx -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Inc" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/STM32F4xx_HAL_Driver/Inc" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Middlewares/Third_Party/FreeRTOS/Source/include" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/CMSIS/Device/ST/STM32F4xx/Include" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/CMSIS/Include"  -Og -g3 -Wall -fmessage-length=0 -ffunction-sections -c -fmessage-length=0 -MMD -MP -MF"Src/gpio.d" -MT"Src/gpio.o" -o "Src/gpio.o" "../Src/gpio.c"
-Finished building: ../Src/gpio.c
- 
-Building file: ../Src/i2c.c
-Invoking: MCU GCC Compiler
-D:\Users\Tyler\Documents\GitHub\oil_lamp\mcu\Debug
-arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 '-D__weak=__attribute__((weak))' '-D__packed=__attribute__((__packed__))' -DUSE_HAL_DRIVER -DSTM32F446xx -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Inc" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/STM32F4xx_HAL_Driver/Inc" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Middlewares/Third_Party/FreeRTOS/Source/include" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/CMSIS/Device/ST/STM32F4xx/Include" -I"D:/Users/Tyler/Documents/GitHub/oil_lamp/mcu/Drivers/CMSIS/Include"  -Og -g3 -Wall -fmessage-length=0 -ffunction-sections -c -fmessage-length=0 -MMD -MP -MF"Src/i2c.d" -MT"Src/i2c.o" -o "Src/i2c.o" "../Src/i2c.c"
-Finished building: ../Src/i2c.c
- 
 Building file: ../Src/main.c
 Invoking: MCU GCC Compiler
 D:\Users\Tyler\Documents\GitHub\oil_lamp\mcu\Debug
@@ -232,5 +214,5 @@ Generating hex and Printing size information:
 arm-none-eabi-objcopy -O ihex "mcu.elf" "mcu.hex"
 arm-none-eabi-size "mcu.elf"
    text	   data	    bss	    dec	    hex	filename
-  17148	     24	   5800	  22972	   59bc	mcu.elf
+      8	      0	      0	      8	      8	mcu.elf
  
