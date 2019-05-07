@@ -1,0 +1,40 @@
+/**
+ * @file MPU9250.h
+ * @author Tyler
+ *
+ * @defgroup MPU9250_Driver_Header Header
+ * @ingroup MPU9250_Driver
+ * @{
+ */
+
+#ifndef MPU9250_H_
+#define MPU9250_H_
+
+
+
+
+/********************************** Includes *********************************/
+#include <math.h>
+#include "cmsis_os.h"
+#include "i2c.h"
+#include "MPU6050_t.h"
+
+
+
+
+/********************************* Functions *********************************/
+// These should only be used before the scheduler is started
+int MPU6050Init(MPU6050_t* myMPU);
+void resetIMUBlocking(void);
+
+// These are the only ones that should really be used during runtime once the
+// scheduler has started.
+int accelReadDMA(MPU9250_t* myMPU, osSemaphoreId sem);
+int gyroReadDMA(MPU9250_t* myMPU, osSemaphoreId sem);
+
+/**
+ * @}
+ */
+/* end - MPU9250_Driver_Header */
+
+#endif /* MPU9250_H_ */
