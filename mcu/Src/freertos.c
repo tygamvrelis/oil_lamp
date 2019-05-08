@@ -243,8 +243,8 @@ void StartImuBaseTask(void const * argument)
   /* USER CODE BEGIN StartImuBaseTask */
 	attachSemaphore(&imu_base, I2C1SemHandle);
 	cFilt_t filt_o, filt_i;
-	filt_o.alpha = 0.98;
-	filt_i.alpha = 0.98;
+	filt_o.alpha = 0.70;
+	filt_i.alpha = 0.70;
     TickType_t xLastWakeTime;
     xLastWakeTime = xTaskGetTickCount();
 	osDelay(TX_PERIOD_MS - 2);
@@ -290,8 +290,8 @@ void StartImuLampTask(void const * argument)
   /* USER CODE BEGIN StartImuLampTask */
 	attachSemaphore(&imu_lamp, I2C2SemHandle);
 	cFilt_t filt_o, filt_i;
-	filt_o.alpha = 0.98;
-	filt_i.alpha = 0.98;
+	filt_o.alpha = 0.70;
+	filt_i.alpha = 0.70;
     TickType_t xLastWakeTime;
     xLastWakeTime = xTaskGetTickCount();
     osDelay(TX_PERIOD_MS - 2);
