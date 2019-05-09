@@ -212,6 +212,18 @@ int gyroReadIT(MPU6050_t* myMPU){
     return 1;
 }
 
+imu_data_t get_data(MPU6050_t* myMPU)
+{
+	imu_data_t data;
+	data.az = myMPU->az;
+	data.ay = myMPU->ay;
+	data.ax = myMPU->ax;
+	data.vz = myMPU->vz;
+	data.vy = myMPU->vy;
+	data.vx = myMPU->vx;
+	return data;
+}
+
 /**
  * @defgroup MPU6050_Driver_Error_Handlers Errata handlers
  * @brief Handles a silicon bug in the I2C module that shows up occasionally

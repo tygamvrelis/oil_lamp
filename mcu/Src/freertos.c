@@ -199,14 +199,15 @@ void StartRxTask(void const * argument)
 * @retval None
 */
 /* USER CODE END Header_StartTxTask */
+#define BUF_SIZE (MAX_TABLE_IDX * sizeof(imu_data_t) + 2)
+#define SYNCH_FLAG (BUF_SIZE - 2)
 void StartTxTask(void const * argument)
 {
   /* USER CODE BEGIN StartTxTask */
 	// For packet timing management
 	TickType_t xLastWakeTime = xTaskGetTickCount();
-	uint8_t buf[MAX_TABLE_IDX * sizeof(float) + 1] = {0};
-	buf[MAX_TABLE_IDX  * sizeof(float)] = '\n';
-	float tmp;
+	uint8_t buf[BUF_SIZE] = {0};
+	buf[BUF_SIZE - 1] = '\n'; // Termination character
 	for (;;)
 	{
 		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(TX_PERIOD_MS));
@@ -214,9 +215,9 @@ void StartTxTask(void const * argument)
 		// Pack data
 		for (uint8_t i = 0; i < MAX_TABLE_IDX; ++i)
 		{
-			read_table(i, &tmp);
-			memcpy(&buf[i * sizeof(float)], (uint8_t*)&tmp, sizeof(float));
+			read_table(i, (float*)&buf[i * sizeof(imu_data_t)], sizeof(imu_data_t));
 		}
+		// TODO: add camera synch flag if needed
 
 		// Send
         if (HAL_UART_Transmit_DMA(&huart2, buf, sizeof(buf)) != HAL_OK)
@@ -225,7 +226,7 @@ void StartTxTask(void const * argument)
         }
         else
         {
-        	xSemaphoreTake(TxSemHandle, pdMS_TO_TICKS(1));
+        	xSemaphoreTake(TxSemHandle, pdMS_TO_TICKS(3));
         }
 	}
   /* USER CODE END StartTxTask */
@@ -242,38 +243,18 @@ void StartImuBaseTask(void const * argument)
 {
   /* USER CODE BEGIN StartImuBaseTask */
 	attachSemaphore(&imu_base, I2C1SemHandle);
-	cFilt_t filt_o, filt_i;
-	filt_o.alpha = 0.70;
-	filt_i.alpha = 0.70;
     TickType_t xLastWakeTime;
     xLastWakeTime = xTaskGetTickCount();
 	osDelay(TX_PERIOD_MS - 2);
+    imu_data_t base_data;
 	for(;;)
 	{
 		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(IMU_CYCLE_MS));
 
         accelReadIT(&imu_base);
         gyroReadIT(&imu_base);
-
-        // Estimate outer gimbal angle
-        float theta_o = cFilt_update(
-			&filt_o,
-			imu_base.vy,
-			imu_base.ax,
-			imu_base.az,
-			IMU_CYCLE_MS
-		);
-        write_table(BASE_ANGLE_OUTER, theta_o);
-
-        // Estimate inner gimbal angle
-        float theta_i = cFilt_update(
-			&filt_i,
-			imu_base.vx,
-			imu_base.ay,
-			imu_base.az,
-			IMU_CYCLE_MS
-		);
-        write_table(BASE_ANGLE_INNER, theta_i);
+        base_data = get_data(&imu_base);
+        write_table(TABLE_IDX_LAMP_DATA, (float*)&base_data, sizeof(imu_data_t));
 	}
   /* USER CODE END StartImuBaseTask */
 }
@@ -289,38 +270,18 @@ void StartImuLampTask(void const * argument)
 {
   /* USER CODE BEGIN StartImuLampTask */
 	attachSemaphore(&imu_lamp, I2C2SemHandle);
-	cFilt_t filt_o, filt_i;
-	filt_o.alpha = 0.70;
-	filt_i.alpha = 0.70;
     TickType_t xLastWakeTime;
     xLastWakeTime = xTaskGetTickCount();
     osDelay(TX_PERIOD_MS - 2);
+    imu_data_t lamp_data;
     for(;;)
     {
         vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(IMU_CYCLE_MS));
 
         accelReadIT(&imu_lamp);
         gyroReadIT(&imu_lamp);
-
-        // Estimate outer gimbal angle
-        float theta_o = cFilt_update(
-			&filt_o,
-			imu_lamp.vy,
-			imu_lamp.ax,
-			imu_lamp.az,
-			IMU_CYCLE_MS
-		);
-        write_table(LAMP_ANGLE_OUTER, theta_o);
-
-        // Estimate inner gimbal angle
-        float theta_i = cFilt_update(
-			&filt_i,
-			imu_lamp.vx,
-			imu_lamp.ay,
-			imu_lamp.az,
-			IMU_CYCLE_MS
-		);
-        write_table(LAMP_ANGLE_INNER, theta_i);
+        lamp_data = get_data(&imu_lamp);
+        write_table(TABLE_IDX_BASE_DATA, (float*)&lamp_data, sizeof(imu_data_t));
     }
   /* USER CODE END StartImuLampTask */
 }

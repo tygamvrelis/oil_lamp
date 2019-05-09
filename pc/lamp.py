@@ -79,12 +79,14 @@ def parse_args():
 
     return vars(parser.parse_args())
 
+BUF_SIZE = 2*6*4 + 1 # 2 IMUs * 6 floats + 1 camera synch byte
 def decode(buff):
     l = []
-    assert(len(buff) == 16), "Length is {0}".format(len(buff))
-    for i in range(4):
+    assert(len(buff) == BUF_SIZE), "Length is {0}".format(len(buff))
+    for i in range(2*6):
         l.append(struct.unpack('<f', buff[i * 4:(i + 1) * 4])[0])
-    return np.array(l)
+    synch = struct.unpack('<B', buff[-1])
+    return np.array(l), synch
 
 def receive(ser):
     timeout = 0.015 # ms timeout
@@ -112,7 +114,7 @@ def receive(ser):
                 # reset the buffer since the contents must have been shifted
                 terminated = struct.unpack('<c', rawData[i:i+1])[0] == b'\n'
                 if terminated:
-                    if len(buff) == 16:
+                    if len(buff) == BUF_SIZE:
                         # If we get here, we have received a full packet
                         receive_succeeded = True
                         break
