@@ -33,7 +33,7 @@ static imu_data_t table[MAX_TABLE_IDX] = {0};
 /***************************** Public Functions ******************************/
 bool write_table(idx_t idx, float* src, size_t num)
 {
-	if (num == 0 || src == NULL || idx + num - 1 >= MAX_TABLE_IDX)
+	if (num == 0 || src == NULL || idx * sizeof(imu_data_t) + num > sizeof(table))
 	{
 		return false;
 	}
@@ -47,7 +47,7 @@ bool write_table(idx_t idx, float* src, size_t num)
 
 bool read_table(idx_t idx, float* dest, size_t num)
 {
-	if (num == 0 || dest == NULL || idx + num -1 >= MAX_TABLE_IDX)
+	if (num == 0 || dest == NULL || idx * sizeof(imu_data_t) + num > sizeof(table))
 	{
 		return false;
 	}
