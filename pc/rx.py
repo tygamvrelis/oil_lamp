@@ -17,9 +17,9 @@ def print_imu(data):
     '''
     data = np.round(data, 2)
     t = PrettyTable(['', 'Base Accel (deg/s)', 'Base Gyro (m/s^2)', 'Lamp Accel (deg/s)', 'Lamp Gyro (m/s^2)'])
-    t.add_row(["X", data[0], data[3], data[6], data[9]])
+    t.add_row(["Z", data[0], data[3], data[6], data[9]])
     t.add_row(["Y", data[1], data[4], data[7], data[10]])
-    t.add_row(["Z", data[2], data[5], data[8], data[11]])
+    t.add_row(["X", data[2], data[5], data[8], data[11]])
     print(t)
 
 def log_preamble(file):
@@ -39,7 +39,8 @@ def log_preamble(file):
                           "\t\tVz\n"
                           "\t\tVy\n"
                           "\t\tVx\n"
-                          "\tStatus\n\n")
+                          "\tStatus\n"
+                          "START\n")
     file.write(preamble)
                           
 def log_data(file, buff):
@@ -47,13 +48,14 @@ def log_data(file, buff):
         log_data.n += 1
     except AttributeError:
         log_data.n = 0
-    imu, status = decode(buff)
+    status = decode_status(buff)
     data_to_write = datetime.now().strftime('%H:%M:%S.%f')[:-3] + " "
-    for i in range(2*6):
-        data_to_write = data_to_write + str(imu[i]) + " "
-    data_to_write = data_to_write + " " + str(status) + "\n"
-    file.write(data_to_write)
+    data_to_write = data_to_write + str(status) + " "
+    file.write(data_to_write)       # Human-readable text, for time + flags
+    file.write(get_imu_bytes(buff)) # Binary data. 96% of file if written as str
+    file.write("\n")
     if log_data.n > 0 and log_data.n % 10 == 0:
+        imu = decode_data(buff)
         logString(str(status))
         print_imu(imu)
 
