@@ -27,7 +27,7 @@ def main():
     cwd = os.getcwd()
     if analyze_fname:
         logString("Starting analysis")
-        analyze(analyze_fname, args['plot'], args['estimate'])
+        analyze(analyze_fname, args['imu'], args['estimate'])
     elif stream_fname:
         logString("Stream not implemented")
         return

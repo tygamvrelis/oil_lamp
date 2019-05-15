@@ -61,7 +61,7 @@ def parse_args():
     )
     
     parser.add_argument(
-        '--plot',
+        '--imu',
         help='Specifies whether to plot lamp or base data when running an'
              ' analysis flow. Arguments: lamp, base, both. Default: base',
         default='base'
