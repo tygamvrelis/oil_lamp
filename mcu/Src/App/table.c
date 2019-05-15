@@ -10,8 +10,10 @@
 
 
 /********************************** Includes *********************************/
-#include <App/table.h>
+#include "App/table.h"
+#include <string.h>
 #include "cmsis_os.h"
+#include "MPU6050/MPU6050_t.h"
 
 
 
@@ -23,35 +25,35 @@ extern osSemaphoreId TableLockHandle;
 
 
 /****************************** Private variables ****************************/
-static float table[MAX_TABLE_IDX] = {0};
+static imu_data_t table[MAX_TABLE_IDX] = {0};
 
 
 
 
 /***************************** Public Functions ******************************/
-bool write_table(idx_t idx, float value)
+bool write_table(idx_t idx, float* src, size_t num)
 {
-	if (idx >= MAX_TABLE_IDX)
+	if (num == 0 || src == NULL || idx * sizeof(imu_data_t) + num > sizeof(table))
 	{
 		return false;
 	}
 
 	xSemaphoreTake(TableLockHandle, pdMS_TO_TICKS(1));
-	table[idx] = value;
+	memcpy(&table[idx], src, num);
 	xSemaphoreGive(TableLockHandle);
 
 	return true;
 }
 
-bool read_table(idx_t idx, float* data)
+bool read_table(idx_t idx, float* dest, size_t num)
 {
-	if (idx >= MAX_TABLE_IDX)
+	if (num == 0 || dest == NULL || idx * sizeof(imu_data_t) + num > sizeof(table))
 	{
 		return false;
 	}
 
 	xSemaphoreTake(TableLockHandle, pdMS_TO_TICKS(1));
-	*data = table[idx];
+	memcpy(dest, &table[idx], num);
 	xSemaphoreGive(TableLockHandle);
 
 	return true;

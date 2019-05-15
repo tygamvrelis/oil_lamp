@@ -15,6 +15,7 @@
 
 /********************************** Includes *********************************/
 #include <stdbool.h>
+#include <stddef.h>
 
 
 
@@ -22,10 +23,8 @@
 /*********************************** Types ************************************/
 typedef enum
 {
-	BASE_ANGLE_OUTER,
-	BASE_ANGLE_INNER,
-	LAMP_ANGLE_OUTER,
-	LAMP_ANGLE_INNER,
+	TABLE_IDX_BASE_DATA,
+	TABLE_IDX_LAMP_DATA,
 	MAX_TABLE_IDX
 }idx_t;
 
@@ -33,8 +32,8 @@ typedef enum
 
 
 /********************************* Functions *********************************/
-bool write_table(idx_t idx, float value);
-bool read_table(idx_t idx, float* data);
+bool write_table(idx_t idx, float* src, size_t num);
+bool read_table(idx_t idx, float* dest, size_t num);
 
 /**
  * @}

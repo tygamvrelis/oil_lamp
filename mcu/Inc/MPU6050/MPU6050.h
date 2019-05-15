@@ -54,6 +54,8 @@ int accelReadIT(MPU6050_t* myMPU);
  */
 int gyroReadIT(MPU6050_t* myMPU);
 
+imu_data_t get_data(MPU6050_t* myMPU);
+
 void generateClocks(
 	I2C_HandleTypeDef* hi2c,
 	uint8_t numClocks,
