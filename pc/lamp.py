@@ -7,7 +7,6 @@ import sys
 import glob
 import struct
 import numpy as np
-import matplotlib.pyplot as plt
 from util import *
 from rx import record
 from analyze import analyze
@@ -27,9 +26,8 @@ def main():
     
     cwd = os.getcwd()
     if analyze_fname:
-        logString("Analysis not implemented")
-        return
-        analyze(analyze_fname)
+        logString("Starting analysis")
+        analyze(analyze_fname, args['plot'], args['estimate'])
     elif stream_fname:
         logString("Stream not implemented")
         return

@@ -54,10 +54,25 @@ def parse_args():
     
     parser.add_argument(
         '--analyze',
-        help='Loads the specified binary and plots the angle data. Must specify'
-             ' the full file name (with extension), or "latest" to use the most'
-             ' recent .dat',
+        help='Loads the specified binary and plots the data. Must specify the'
+             ' full file name (with extension), or "latest" to use the most'
+             ' recent .dat. See the plot argument as well.',
         default=''
+    )
+    
+    parser.add_argument(
+        '--plot',
+        help='Specifies whether to plot lamp or base data when running an'
+             ' analysis flow. Arguments: lamp, base, both. Default: base',
+        default='base'
+    )
+    
+    parser.add_argument(
+        '--estimate',
+        help='Specifies whether to plot angle estimates or raw data when running'
+             ' an analysis flow. Arguments: ind_angles, comb_angles, none.'
+             ' Default: none',
+        default='none'
     )
     
     parser.add_argument(
@@ -109,9 +124,13 @@ def decode_status(buff):
     status = struct.unpack('<B', get_status_byte(buff))[0]
     return status
 
+def get_data_dir():
+    cwd = os.getcwd()
+    return os.path.join(cwd, "data")
+
 def make_data_dir():
     cwd = os.getcwd()
-    if not os.path.isdir(os.path.join(cwd, "data")):
+    if not os.path.isdir(get_data_dir()):
         os.mkdir("data")
 
 def load_data_from_file(file_name):
@@ -123,8 +142,8 @@ def load_data_from_file(file_name):
     file_name : str
         Name of the file to load. Example: 07052019_23_28_36.dat.
     '''
-    cwd = os.getcwd()
-    fname = os.path.join(cwd, file_name)
+
+    fname = os.path.join(get_data_dir(), file_name)
     logString("Attempting to open data " + fname)
     with open(fname, "rb") as f:
         bin_data = f.readlines() # Files shouldn't be more than a few Mb max
