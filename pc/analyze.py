@@ -11,7 +11,8 @@ def analyze(fname):
         fname = max(files, key=os.path.getctime)
 
     SAMPLE_RATE = 100.0 # Hz
-    angles, num_samples = load_angles_from_file(fname)
+    imu_data, num_samples = load_angles_from_file(fname)
+    # TODO: (tyler) could load the time points from the data file itself
     t = np.linspace(0, num_samples / SAMPLE_RATE, num=num_samples, endpoint=False)
 
     fig, ax = plt.subplots()
