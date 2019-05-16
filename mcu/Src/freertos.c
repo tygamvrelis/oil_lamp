@@ -25,7 +25,7 @@
 #include "cmsis_os.h"
 
 /* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
+/* USER CODE BEGIN Includes */     
 #include <string.h>
 #include "usart.h"
 #include "App/table.h"
@@ -44,7 +44,8 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-
+#define BUF_SIZE (MAX_TABLE_IDX * sizeof(imu_data_t) + 2)
+#define SYNCH_FLAG (BUF_SIZE - 2)
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -199,8 +200,6 @@ void StartRxTask(void const * argument)
 * @retval None
 */
 /* USER CODE END Header_StartTxTask */
-#define BUF_SIZE (MAX_TABLE_IDX * sizeof(imu_data_t) + 2)
-#define SYNCH_FLAG (BUF_SIZE - 2)
 void StartTxTask(void const * argument)
 {
   /* USER CODE BEGIN StartTxTask */
@@ -254,7 +253,7 @@ void StartImuBaseTask(void const * argument)
         accelReadIT(&imu_base);
         gyroReadIT(&imu_base);
         base_data = get_data(&imu_base);
-        write_table(TABLE_IDX_LAMP_DATA, (float*)&base_data, sizeof(imu_data_t));
+        write_table(TABLE_IDX_BASE_DATA, (float*)&base_data, sizeof(imu_data_t));
 	}
   /* USER CODE END StartImuBaseTask */
 }
@@ -281,7 +280,7 @@ void StartImuLampTask(void const * argument)
         accelReadIT(&imu_lamp);
         gyroReadIT(&imu_lamp);
         lamp_data = get_data(&imu_lamp);
-        write_table(TABLE_IDX_BASE_DATA, (float*)&lamp_data, sizeof(imu_data_t));
+        write_table(TABLE_IDX_LAMP_DATA, (float*)&lamp_data, sizeof(imu_data_t));
     }
   /* USER CODE END StartImuLampTask */
 }
