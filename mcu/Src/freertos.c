@@ -45,7 +45,7 @@
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 #define BUF_SIZE (MAX_TABLE_IDX * sizeof(imu_data_t) + 2)
-#define SYNCH_FLAG (BUF_SIZE - 2)
+#define STATUS (BUF_SIZE - 2)
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -64,6 +64,10 @@ osStaticThreadDef_t ImuBaseTaskControlBlock;
 osThreadId ImuLampHandle;
 uint32_t ImuLampTaskBuffer[ 128 ];
 osStaticThreadDef_t ImuLampTaskControlBlock;
+osTimerId StatusLEDTmrHandle;
+osStaticTimerDef_t StatusLEDTmrControlBlock;
+osTimerId CameraLEDTmrHandle;
+osStaticTimerDef_t CameraLEDTmrControlBlock;
 osMutexId TableLockHandle;
 osStaticMutexDef_t TableLockControlBlock;
 osSemaphoreId I2C2SemHandle;
@@ -77,18 +81,45 @@ osStaticSemaphoreDef_t RxSemControlBlock;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
-   
+/**
+ * @brief Toggles the green LED, LD2
+ * @note  Useful for debugging
+ */
+inline void toggle_status_led(){
+    HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+}
+
+/** @brief The states the camera synchronization LED can be in */
+typedef enum{
+    CAMERA_LED_ON = GPIO_PIN_SET,   /**< LED is on  */
+	CAMERA_LED_OFF = GPIO_PIN_RESET /**< LED is off */
+}CameraState_t;
+
+/** @brief Turns the camera synchronization LED on or off */
+inline void set_camera_led_state(CameraState_t state){
+    HAL_GPIO_WritePin(CAMERA_LED_GPIO_Port, CAMERA_LED_Pin, state);
+}
+
+/** @brief Reads the camera LED pin to see whether it's on or off */
+inline GPIO_PinState get_camera_led_state(){
+    return HAL_GPIO_ReadPin(CAMERA_LED_GPIO_Port, CAMERA_LED_Pin);
+}
 /* USER CODE END FunctionPrototypes */
 
 void StartRxTask(void const * argument);
 void StartTxTask(void const * argument);
 void StartImuBaseTask(void const * argument);
 void StartImuLampTask(void const * argument);
+void StatusLEDTmrCallback(void const * argument);
+void CameraLEDTmrCallback(void const * argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
 /* GetIdleTaskMemory prototype (linked to static allocation support) */
 void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackType_t **ppxIdleTaskStackBuffer, uint32_t *pulIdleTaskStackSize );
+
+/* GetTimerTaskMemory prototype (linked to static allocation support) */
+void vApplicationGetTimerTaskMemory( StaticTask_t **ppxTimerTaskTCBBuffer, StackType_t **ppxTimerTaskStackBuffer, uint32_t *pulTimerTaskStackSize );
 
 /* USER CODE BEGIN GET_IDLE_TASK_MEMORY */
 static StaticTask_t xIdleTaskTCBBuffer;
@@ -102,6 +133,19 @@ void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackTy
   /* place for user code */
 }                   
 /* USER CODE END GET_IDLE_TASK_MEMORY */
+
+/* USER CODE BEGIN GET_TIMER_TASK_MEMORY */
+static StaticTask_t xTimerTaskTCBBuffer;
+static StackType_t xTimerStack[configTIMER_TASK_STACK_DEPTH];
+  
+void vApplicationGetTimerTaskMemory( StaticTask_t **ppxTimerTaskTCBBuffer, StackType_t **ppxTimerTaskStackBuffer, uint32_t *pulTimerTaskStackSize )  
+{
+  *ppxTimerTaskTCBBuffer = &xTimerTaskTCBBuffer;
+  *ppxTimerTaskStackBuffer = &xTimerStack[0];
+  *pulTimerTaskStackSize = configTIMER_TASK_STACK_DEPTH;
+  /* place for user code */
+}                   
+/* USER CODE END GET_TIMER_TASK_MEMORY */
 
 /**
   * @brief  FreeRTOS initialization
@@ -143,8 +187,20 @@ void MX_FREERTOS_Init(void) {
   /* add semaphores, ... */
   /* USER CODE END RTOS_SEMAPHORES */
 
+  /* Create the timer(s) */
+  /* definition and creation of StatusLEDTmr */
+  osTimerStaticDef(StatusLEDTmr, StatusLEDTmrCallback, &StatusLEDTmrControlBlock);
+  StatusLEDTmrHandle = osTimerCreate(osTimer(StatusLEDTmr), osTimerPeriodic, NULL);
+
+  /* definition and creation of CameraLEDTmr */
+  osTimerStaticDef(CameraLEDTmr, CameraLEDTmrCallback, &CameraLEDTmrControlBlock);
+  CameraLEDTmrHandle = osTimerCreate(osTimer(CameraLEDTmr), osTimerOnce, NULL);
+
   /* USER CODE BEGIN RTOS_TIMERS */
   /* start timers, add new ones, ... */
+  // Make status LED blink at 0.5 Hz
+  osTimerStop(StatusLEDTmrHandle);
+  osTimerStart(StatusLEDTmrHandle, 1000);
   /* USER CODE END RTOS_TIMERS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
@@ -205,6 +261,7 @@ void StartTxTask(void const * argument)
   /* USER CODE BEGIN StartTxTask */
 	// For packet timing management
 	TickType_t xLastWakeTime = xTaskGetTickCount();
+	uint8_t status;
 	uint8_t buf[BUF_SIZE] = {0};
 	buf[BUF_SIZE - 1] = '\n'; // Termination character
 	for (;;)
@@ -216,7 +273,11 @@ void StartTxTask(void const * argument)
 		{
 			read_table(i, (float*)&buf[i * sizeof(imu_data_t)], sizeof(imu_data_t));
 		}
-		// TODO: add camera synch flag if needed
+
+		// Add camera synch flag if needed
+		status = 0;
+		status |= get_camera_led_state();
+		buf[STATUS] = status;
 
 		// Send
         if (HAL_UART_Transmit_DMA(&huart2, buf, sizeof(buf)) != HAL_OK)
@@ -283,6 +344,22 @@ void StartImuLampTask(void const * argument)
         write_table(TABLE_IDX_LAMP_DATA, (float*)&lamp_data, sizeof(imu_data_t));
     }
   /* USER CODE END StartImuLampTask */
+}
+
+/* StatusLEDTmrCallback function */
+void StatusLEDTmrCallback(void const * argument)
+{
+  /* USER CODE BEGIN StatusLEDTmrCallback */
+	toggle_status_led();
+  /* USER CODE END StatusLEDTmrCallback */
+}
+
+/* CameraLEDTmrCallback function */
+void CameraLEDTmrCallback(void const * argument)
+{
+  /* USER CODE BEGIN CameraLEDTmrCallback */
+	set_camera_led_state(CAMERA_LED_OFF);
+  /* USER CODE END CameraLEDTmrCallback */
 }
 
 /* Private application code --------------------------------------------------*/
