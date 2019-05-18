@@ -8,7 +8,7 @@ Goldie has two modes:
 * **Playback Mode** (PM)(wiggles)
 
 The hardware modifications and electronic requirements to support **scrivner** will be permanent to the host lamp. 
-The hardware modifications and electronic requirements to support **wiggles** need to be able to connect and disconnect from host lamp and **scrivner's** equiptment with minimal effort and trace.
+The hardware modifications and electronic requirements to support **wiggles** will be able to connect and disconnect from the host lamp and **scrivner's** equiptment with minimal effort and trace.
 
 ```
   Screwed at its axis against the side, a swinging lamp slightly oscillates in Jonah’s room;
@@ -19,17 +19,20 @@ the false, lying levels among which it hung. The lamp alarms and frightens Jonah
 in his berth his tormented eyes roll round the place, and this thus far successful fugitive
 finds no refuge for his restless glance. But that contradiction in the lamp more and more appals him. 
 The floor, the ceiling, and the side, are all awry. ‘Oh! so my conscience hangs in me!’ he groans,
-‘straight upwards, so it burns; but the chambers of my soul are all in crookedness!’
+‘straight upwards, so it burns; but the chambers of my soul are all in crookedness!’ (83)
 
-Herman Melville, Moby Dick (1851).
+speaks of a Turkish Mosque built in honour of Jonah, in which Mosque 
+was a miraculous lamp that burnt without any oil. (558)
+
+Herman Melville; Moby Dick (1851).
 ```
 ```
-  One prime thing was this,--he was always there--
+  One prime thing was this,--he was always there-- (12)
 
   It is, of course, an indispensable part of a scrivener’s business to verify the
 accuracy of his copy, word by word. Where there are two or more scriveners in
 an office, they assist each other in this examination, one reading from the copy,
-the other holding the original.
+the other holding the original. (6)
 
-Herman Melville, Bartleby, The Scrivener (1856).
+Herman Melville; Bartleby, The Scrivener (1856).
 ```
