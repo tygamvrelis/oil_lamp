@@ -10,7 +10,7 @@ Goldie has two modes:
 * **Playback Mode** (PM)(wiggles)
 
 The hardware modifications and electronic requirements to support **scrivner** will be permanent to the host lamp. 
-The hardware modifications and electronic requirements to support **wiggles** need to be able to connect and disconnect from host lamp and **RM** equiptment with minimal effort and trace.
+The hardware modifications and electronic requirements to support **wiggles** need to be able to connect and disconnect from host lamp and **scrivner's** equiptment with minimal effort and trace.
 ```
   Screwed at its axis against the side, a swinging lamp slightly oscillates in Jonah’s room;
 and the ship, heeling over towards the wharf with the weight of the last bales received, 
