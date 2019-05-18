@@ -63,6 +63,7 @@ void Error_Handler(void);
 #define IMU_CYCLE_MS 10
 #define B1_Pin GPIO_PIN_13
 #define B1_GPIO_Port GPIOC
+#define B1_EXTI_IRQn EXTI15_10_IRQn
 #define CAMERA_LED_Pin GPIO_PIN_1
 #define CAMERA_LED_GPIO_Port GPIOC
 #define USART_TX_Pin GPIO_PIN_2

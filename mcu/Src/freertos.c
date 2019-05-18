@@ -364,6 +364,18 @@ void CameraLEDTmrCallback(void const * argument)
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+	if (GPIO_Pin == B1_Pin)
+	{
+		// Blue button on Nucleo was pushed.
+		// Turn on camera synchronization LED for 100 ms (about 3 frames...?)
+		set_camera_led_state(CAMERA_LED_ON);
+        osTimerStop(CameraLEDTmrHandle);
+        osTimerStart(CameraLEDTmrHandle, 100);
+	}
+}
+
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart){
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     if (huart->Instance == USART2 && TxSemHandle != NULL){
