@@ -1,8 +1,6 @@
 # oil_lamp ![banner](https://raw.githubusercontent.com/tygamvrelis/oil_lamp/master/docs/DHR%20Gimballed%20Berth%20Lamp%20Product%20Image.jpg?token=AMDHDXBQ6OV35PYJENQGUWS45FFLO)
 
-
-
-> oil_lamp is a repository for the embedded systems controlling a DHR gimballed oil lamp that has been modified and augmented into a
+oil_lamp is a repository for the embedded systems controlling a DHR gimballed oil lamp that has been modified and augmented into a
 recording and proprietary playback device. The Gimballed Oil Lamp Wave Recording and Playback Device (GOLWRPD: *Goldwrapped*: Goldie for short) is a cultural apparatus to gather non-cultural information.
 
 Goldie has two modes: 
@@ -26,6 +24,8 @@ The floor, the ceiling, and the side, are all awry. ‘Oh! so my conscience hang
 Herman Melville, Moby Dick (1851).
 ```
 ```
+  One prime thing was this,--he was always there--
+
   It is, of course, an indispensable part of a scrivener’s business to verify the
 accuracy of his copy, word by word. Where there are two or more scriveners in
 an office, they assist each other in this examination, one reading from the copy,
