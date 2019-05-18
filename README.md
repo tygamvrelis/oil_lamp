@@ -3,5 +3,11 @@
 
 
 > oil_lamp is a repository for the embedded system aboard a DHR gimballed oil lamp that has been modified and augmented into a
-recording and proprietary playback device. The Gimballed Oil Lamp Wave Recording and Playback Device (GOLWRPD: <i>Goldwrapped</i>: Goldie for short) is a cultural apparatus to gather non-cultural information.
+recording and proprietary playback device. The Gimballed Oil Lamp Wave Recording and Playback Device (GOLWRPD: *Goldwrapped*: Goldie for short) is a cultural apparatus to gather non-cultural information.
 
+Goldie has two modes: 
+* **Recording Mode** (RM)
+* **Playback Mode** (PM)
+
+The hardware modifications and electronic requirements to support **RM** will be permanent to the host lamp. 
+The hardware modifications and electronic requirement to support **PM** need to be able to connect and disconnect from host lamp and **RM** equiptment with minimal effort and trace.
