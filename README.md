@@ -25,4 +25,11 @@ The floor, the ceiling, and the side, are all awry. ‘Oh! so my conscience hang
 
 Herman Melville, Moby Dick (1851).
 ```
+```
+  It is, of course, an indispensable part of a scrivener’s business to verify the
+accuracy of his copy, word by word. Where there are two or more scriveners in
+an office, they assist each other in this examination, one reading from the copy,
+the other holding the original.
 
+Herman Melville, Bartleby, The Scrivener (1856).
+```
