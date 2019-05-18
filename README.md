@@ -10,4 +10,4 @@ Goldie has two modes:
 * **Playback Mode** (PM)
 
 The hardware modifications and electronic requirements to support **RM** will be permanent to the host lamp. 
-The hardware modifications and electronic requirement to support **PM** need to be able to connect and disconnect from host lamp and **RM** equiptment with minimal effort and trace.
+The hardware modifications and electronic requirements to support **PM** need to be able to connect and disconnect from host lamp and **RM** equiptment with minimal effort and trace.
