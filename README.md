@@ -2,7 +2,7 @@
 
 
 
-> oil_lamp is a repository for the embedded system aboard a DHR gimballed oil lamp that has been modified and augmented into a
+> oil_lamp is a repository for the embedded systems controlling a DHR gimballed oil lamp that has been modified and augmented into a
 recording and proprietary playback device. The Gimballed Oil Lamp Wave Recording and Playback Device (GOLWRPD: *Goldwrapped*: Goldie for short) is a cultural apparatus to gather non-cultural information.
 
 Goldie has two modes: 
@@ -11,6 +11,7 @@ Goldie has two modes:
 
 The hardware modifications and electronic requirements to support **scrivner** will be permanent to the host lamp. 
 The hardware modifications and electronic requirements to support **wiggles** need to be able to connect and disconnect from host lamp and **scrivner's** equiptment with minimal effort and trace.
+
 ```
   Screwed at its axis against the side, a swinging lamp slightly oscillates in Jonah’s room;
 and the ship, heeling over towards the wharf with the weight of the last bales received, 
