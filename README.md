@@ -21,7 +21,7 @@ finds no refuge for his restless glance. But that contradiction in the lamp more
 The floor, the ceiling, and the side, are all awry. ‘Oh! so my conscience hangs in me!’ he groans,
 ‘straight upwards, so it burns; but the chambers of my soul are all in crookedness!’ (83)
 
-speaks of a Turkish Mosque built in honour of Jonah, in which Mosque 
+  . . .a Turkish Mosque built in honour of Jonah, in which Mosque 
 was a miraculous lamp that burnt without any oil. (558)
 
 Herman Melville; Moby Dick (1851).
