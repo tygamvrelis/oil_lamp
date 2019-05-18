@@ -50,7 +50,7 @@ def log_data(file, buff):
         log_data.n = 0
     status = decode_status(buff)
     data_to_write = datetime.now().strftime('%H:%M:%S.%f')[:-3] + " "
-    data_to_write = data_to_write + str(status) + " "
+    data_to_write = data_to_write + "stat=" + str(status) + " "
     file.write(data_to_write)       # Human-readable text, for time + flags
     file.write(get_imu_bytes(buff)) # Binary data. 96% of file if written as str
     file.write("\n")

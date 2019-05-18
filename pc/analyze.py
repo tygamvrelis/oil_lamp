@@ -3,6 +3,7 @@
 # Data: May 12, 2019
 
 import numpy as np
+import glob
 import matplotlib.pyplot as plt
 from util import *
 
@@ -64,7 +65,8 @@ class cFilt:
 def analyze(fname, imu_to_plot, estimate):
     make_data_dir()
     if fname == "latest":
-        files = glob.glob(os.path.join(get_data_dir(), + os.sep + '*.dat'))
+        glob_str = os.path.join(get_data_dir(), '*.dat')
+        files = glob.glob(glob_str)
         fname = max(files, key=os.path.getctime)
 
     SAMPLE_RATE = 100.0 # Hz

@@ -26,6 +26,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */     
+#include <stdbool.h>
 #include <string.h>
 #include "usart.h"
 #include "App/table.h"
@@ -50,7 +51,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
-
+static bool scheduler_has_started = false;
 /* USER CODE END Variables */
 osThreadId RxHandle;
 uint32_t RxTaskBuffer[ 128 ];
@@ -91,8 +92,8 @@ inline void toggle_status_led(){
 
 /** @brief The states the camera synchronization LED can be in */
 typedef enum{
-    CAMERA_LED_ON = GPIO_PIN_SET,   /**< LED is on  */
-	CAMERA_LED_OFF = GPIO_PIN_RESET /**< LED is off */
+	CAMERA_LED_OFF = GPIO_PIN_RESET, /**< LED is off */
+    CAMERA_LED_ON = GPIO_PIN_SET     /**< LED is on  */
 }CameraState_t;
 
 /** @brief Turns the camera synchronization LED on or off */
@@ -199,7 +200,6 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN RTOS_TIMERS */
   /* start timers, add new ones, ... */
   // Make status LED blink at 0.5 Hz
-  osTimerStop(StatusLEDTmrHandle);
   osTimerStart(StatusLEDTmrHandle, 1000);
   /* USER CODE END RTOS_TIMERS */
 
@@ -241,6 +241,7 @@ void StartRxTask(void const * argument)
 {
 
   /* USER CODE BEGIN StartRxTask */
+	scheduler_has_started = true;
   /* Infinite loop */
   for(;;)
   {
@@ -366,54 +367,68 @@ void CameraLEDTmrCallback(void const * argument)
 /* USER CODE BEGIN Application */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-	if (GPIO_Pin == B1_Pin)
+	if (scheduler_has_started)
 	{
-		// Blue button on Nucleo was pushed.
-		// Turn on camera synchronization LED for 100 ms (about 3 frames...?)
-		set_camera_led_state(CAMERA_LED_ON);
-        osTimerStop(CameraLEDTmrHandle);
-        osTimerStart(CameraLEDTmrHandle, 100);
+		if (GPIO_Pin == B1_Pin)
+		{
+			// Blue button on Nucleo was pushed. Turn on camera synchronization
+			// LED for 100 ms (about 3 frames...?)
+			set_camera_led_state(CAMERA_LED_ON);
+			osTimerStart(CameraLEDTmrHandle, 100);
+		}
 	}
 }
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart){
-	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-    if (huart->Instance == USART2 && TxSemHandle != NULL){
-    	xSemaphoreGiveFromISR(TxSemHandle, &xHigherPriorityTaskWoken);
-    }
-    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+	if (scheduler_has_started)
+	{
+		BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+		if (huart->Instance == USART2 && TxSemHandle != NULL){
+			xSemaphoreGiveFromISR(TxSemHandle, &xHigherPriorityTaskWoken);
+		}
+		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+	}
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
-	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-    if (huart->Instance == USART2 && RxSemHandle != NULL){
-    	xSemaphoreGiveFromISR(RxSemHandle, &xHigherPriorityTaskWoken);
-    }
-    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+	if (scheduler_has_started)
+	{
+		BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+		if (huart->Instance == USART2 && RxSemHandle != NULL){
+			xSemaphoreGiveFromISR(RxSemHandle, &xHigherPriorityTaskWoken);
+		}
+		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+	}
 }
 
 void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c){
-	// Returns the semaphore taken after non-blocking reception ends
-	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-	if (hi2c->Instance == I2C2){
-    	xSemaphoreGiveFromISR(I2C2SemHandle, &xHigherPriorityTaskWoken);
+	if (scheduler_has_started)
+	{
+		// Returns the semaphore taken after non-blocking reception ends
+		BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+		if (hi2c->Instance == I2C2){
+			xSemaphoreGiveFromISR(I2C2SemHandle, &xHigherPriorityTaskWoken);
+		}
+		else if (hi2c->Instance == I2C1){
+			xSemaphoreGiveFromISR(I2C1SemHandle, &xHigherPriorityTaskWoken);
+		}
+		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 	}
-	else if (hi2c->Instance == I2C1){
-    	xSemaphoreGiveFromISR(I2C1SemHandle, &xHigherPriorityTaskWoken);
-	}
-	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
 void HAL_I2C_MemTxCpltCallback(I2C_HandleTypeDef *hi2c){
-	// Returns the semaphore taken after non-blocking transmission ends
-	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-	if (hi2c->Instance == I2C2){
-    	xSemaphoreGiveFromISR(I2C2SemHandle, &xHigherPriorityTaskWoken);
+	if (scheduler_has_started)
+	{
+		// Returns the semaphore taken after non-blocking transmission ends
+		BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+		if (hi2c->Instance == I2C2){
+			xSemaphoreGiveFromISR(I2C2SemHandle, &xHigherPriorityTaskWoken);
+		}
+		else if (hi2c->Instance == I2C1){
+			xSemaphoreGiveFromISR(I2C1SemHandle, &xHigherPriorityTaskWoken);
+		}
+		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 	}
-	else if (hi2c->Instance == I2C1){
-    	xSemaphoreGiveFromISR(I2C1SemHandle, &xHigherPriorityTaskWoken);
-	}
-	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 /* USER CODE END Application */
 

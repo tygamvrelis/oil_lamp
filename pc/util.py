@@ -161,5 +161,5 @@ def load_data_from_file(file_name):
     
     imu_data = np.ndarray(shape=(int(IMU_BUF_SIZE / 4),num_samples))
     for i in range(num_samples):
-        imu_data[:,i] = decode_data(bin_data[i][15:-1])
+        imu_data[:,i] = decode_data(bin_data[i][20:-1])
     return imu_data, num_samples
