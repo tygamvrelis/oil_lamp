@@ -45,8 +45,12 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-#define BUF_SIZE (MAX_TABLE_IDX * sizeof(imu_data_t) + 2)
-#define STATUS (BUF_SIZE - 2)
+#define BUF_SIZE     (2 + MAX_TABLE_IDX * sizeof(imu_data_t) + 2)
+#define BUF_HEADER_1 0
+#define BUF_HEADER_2 1
+#define BUF_IMU      2
+#define BUF_STATUS   (BUF_SIZE - 2)
+#define BUF_FOOTER   (BUF_SIZE - 1)
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -264,7 +268,9 @@ void StartTxTask(void const * argument)
 	TickType_t xLastWakeTime = xTaskGetTickCount();
 	uint8_t status;
 	uint8_t buf[BUF_SIZE] = {0};
-	buf[BUF_SIZE - 1] = '\n'; // Termination character
+	buf[BUF_HEADER_1] = 0xAA; // 0b10101010
+	buf[BUF_HEADER_2] = 0xAA;
+	buf[BUF_FOOTER] = '\n'; // Termination character
 	for (;;)
 	{
 		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(TX_PERIOD_MS));
@@ -272,13 +278,13 @@ void StartTxTask(void const * argument)
 		// Pack data
 		for (uint8_t i = 0; i < MAX_TABLE_IDX; ++i)
 		{
-			read_table(i, (float*)&buf[i * sizeof(imu_data_t)], sizeof(imu_data_t));
+			read_table(i, (float*)&buf[BUF_IMU + i * sizeof(imu_data_t)], sizeof(imu_data_t));
 		}
 
 		// Add camera synch flag if needed
 		status = 0;
 		status |= get_camera_led_state();
-		buf[STATUS] = status;
+		buf[BUF_STATUS] = status;
 
 		// Send
         if (HAL_UART_Transmit_DMA(&huart2, buf, sizeof(buf)) != HAL_OK)
@@ -287,7 +293,10 @@ void StartTxTask(void const * argument)
         }
         else
         {
-        	xSemaphoreTake(TxSemHandle, pdMS_TO_TICKS(3));
+        	// BUF_SIZE = 52 bytes = 52*8 = 416 bits
+        	// 115200 symbols/sec => 115200*8/10 = 92160 bps
+        	// 416 bits / 92160 bps = 4.55 ms
+        	xSemaphoreTake(TxSemHandle, pdMS_TO_TICKS(5));
         }
 	}
   /* USER CODE END StartTxTask */
