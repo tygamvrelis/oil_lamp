@@ -108,7 +108,11 @@ def analyze(fname, imu_to_plot, estimate):
         plt.xlabel('Time (s)')
         plt.ylabel('Raw data ($m/s^2$ and $^\circ$)')
         
-        fig_name = os.path.join(get_data_dir(), "raw_" + imu_to_plot + "_" + os.path.splitext(fname)[0] + '.png')
+        fig_name = "raw_" + imu_to_plot + "_"
+        fig_name = fig_name + os.path.splitext(os.path.basename(fname))[0]
+        fig_name = fig_name + '.png'
+        fig_name = os.path.join(get_data_dir(), fig_name)
+        print(fig_name)
         plt.savefig(fig_name)
         logString("Saved fig to {0}".format(fig_name))
         plt.close();
@@ -143,19 +147,21 @@ def analyze(fname, imu_to_plot, estimate):
             if imu_to_plot == "lamp" or imu_to_plot == "both":
                 ax.scatter(t, angles[LAMP_OUTER], c="green", label="Lamp (outer)", s=size)
                 ax.scatter(t, angles[LAMP_INNER], c="gold",  label="Lamp (inner)", s=size)
-            fig_name = estimate + "_" + imu_to_plot + "_" + os.path.splitext(fname)[0] + '.png'
+            fig_name = estimate + "_" + imu_to_plot + "_"
         else:
             # Combine the pitch and roll from each IMU into a single value for each
             angles[OUTER:INNER+1,:] = angles[BASE_OUTER:BASE_INNER+1,:] + angles[LAMP_OUTER:LAMP_INNER+1,:]
             ax.scatter(t, angles[OUTER], c="blue",  label="Outer gimbal", s=size)
             ax.scatter(t, angles[INNER], c="red",   label="Inner gimbal", s=size)
-            fig_name = estimate + "_" + os.path.splitext(fname)[0] + '.png'
+            fig_name = estimate + "_"
         ax.legend()
             
         plt.title('Angles vs time')
         plt.xlabel('Time (s)')
         plt.ylabel('Angle ($^\circ$)')
 
+        fig_name = fig_name + os.path.splitext(os.path.basename(fname))[0]
+        fig_name = fig_name + '.png'
         fig_name = os.path.join(get_data_dir(), fig_name)
         plt.savefig(fig_name)
         logString("Saved fig to {0}".format(fig_name))
