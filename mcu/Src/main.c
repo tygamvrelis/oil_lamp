@@ -94,11 +94,11 @@ int main(void)
   MX_GPIO_Init();
   MX_DMA_Init();
   MX_I2C1_Init();
-  MX_I2C2_Init();
   MX_USART2_UART_Init();
+  MX_I2C3_Init();
   /* USER CODE BEGIN 2 */
   init_imu(&imu_base, &hi2c1);
-  init_imu(&imu_lamp, &hi2c2);
+  init_imu(&imu_lamp, &hi2c3);
   /* USER CODE END 2 */
 
   /* Call init function for freertos objects (in freertos.c) */

@@ -25,6 +25,7 @@ def print_imu(data):
 def log_preamble(file):
     preamble = "Order of data on each line is:\n"
     preamble = preamble + ("\tTime\n"
+                          "\tStatus\n"
                           "\tBase:\n"
                           "\t\tAz\n"
                           "\t\tAy\n"
@@ -39,7 +40,6 @@ def log_preamble(file):
                           "\t\tVz\n"
                           "\t\tVy\n"
                           "\t\tVx\n"
-                          "\tStatus\n"
                           "START\n")
     file.write(preamble)
                           
@@ -119,6 +119,7 @@ def record(port, baud, verbose):
     cwd = os.getcwd()
     fname = os.path.join(cwd, fname)
     logString("Creating data file " + fname)
+    first = True
     with open(fname, "wb") as f:
         log_preamble(f)
         logString("Attempting connection to embedded")
@@ -130,6 +131,9 @@ def record(port, baud, verbose):
             try:
                 with serial.Serial(port, baud, timeout=0) as ser:
                     logString("Connected")
+                    if first:
+                        first = False
+                        ser.write('L'.encode()) # L => flash LED
                     while True:
                         success, buff = receive(ser)
                         if success:
