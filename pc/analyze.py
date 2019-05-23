@@ -67,6 +67,23 @@ class cFilt:
         '''
         return self.__theta_p, self.__theta_r
 
+# https://stackoverflow.com/questions/6518811/interpolate-nan-values-in-a-numpy-array
+def nan_helper(y):
+    """Helper to handle indices and logical indices of NaNs.
+
+    Input:
+        - y, 1d numpy array with possible NaNs
+    Output:
+        - nans, logical indices of NaNs
+        - index, a function, with signature indices= index(logical_indices),
+          to convert logical indices of NaNs to 'equivalent' indices
+    Example:
+        >>> # linear interpolation of NaNs
+        >>> nans, x= nan_helper(y)
+        >>> y[nans]= np.interp(x(nans), x(~nans), y[~nans])
+    """
+
+    return np.isnan(y), lambda z: z.nonzero()[0]
 
 def analyze(fname, imu_to_plot, estimate):
     make_data_dir()
@@ -123,6 +140,9 @@ def analyze(fname, imu_to_plot, estimate):
         logString("Saved fig to {0}".format(fig_name))
         plt.close();
     else:
+        # TODO: (Tyler) Only do both base and lamp if arg == "both" (i.e. 
+        # TODO:         optimize cases where analyzing individual IMUs)
+        
         # tau = alpha*dt/(1-alpha)
         # so alpha = tau/(tau + dt)
         # Swing period is about 0.51. Use tau = 0.255
@@ -130,6 +150,18 @@ def analyze(fname, imu_to_plot, estimate):
         alpha_r = 0.96226415094
         base_filt = cFilt(alpha_p, alpha_r)
         lamp_filt = cFilt(alpha_p, alpha_r)
+        
+        # TODO: (Tyler) Move this to util
+        # Interpolate NaN, if needed
+        num_base_nans = np.isnan(imu_data[IMU_BASE_IDX,:]).sum()
+        num_lamp_nans = np.isnan(imu_data[IMU_LAMP_IDX,:]).sum()
+        if num_base_nans + num_lamp_nans > 0:
+            logString("Interpolating NaNs (Base: {0}|Lamp: {1})".format(
+                num_base_nans,num_lamp_nans)
+            )
+            for i in range(imu_data.shape[0]):
+                nans, idx = nan_helper(imu_data[i,:])
+                imu_data[i,nans]= np.interp(idx(nans), idx(~nans), imu_data[i,~nans])
         
         OUTER = 0
         INNER = 1

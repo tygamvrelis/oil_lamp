@@ -166,7 +166,7 @@ def load_data_from_file(file_name):
         cur_line, cur_ind = too_small.pop(0)
     while len(too_small) > 0:
         line, ind = too_small.pop(0)
-        if bin_data[cur_ind] < LOGGED_BUF_SIZE:
+        if len(bin_data[cur_ind]) < LOGGED_BUF_SIZE:
             bin_data[cur_ind] = bin_data[cur_ind] + line
         else:
             cur_ind = ind
