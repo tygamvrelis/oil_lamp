@@ -25,6 +25,7 @@ def print_imu(data):
 def log_preamble(file):
     preamble = "Order of data on each line is:\n"
     preamble = preamble + ("\tTime\n"
+                          "\tStatus\n"
                           "\tBase:\n"
                           "\t\tAz\n"
                           "\t\tAy\n"
@@ -39,7 +40,6 @@ def log_preamble(file):
                           "\t\tVz\n"
                           "\t\tVy\n"
                           "\t\tVx\n"
-                          "\tStatus\n"
                           "START\n")
     file.write(preamble)
                           
@@ -50,7 +50,7 @@ def log_data(file, buff):
         log_data.n = 0
     status = decode_status(buff)
     data_to_write = datetime.now().strftime('%H:%M:%S.%f')[:-3] + " "
-    data_to_write = data_to_write + str(status) + " "
+    data_to_write = data_to_write + "stat=" + str(status) + " "
     file.write(data_to_write)       # Human-readable text, for time + flags
     file.write(get_imu_bytes(buff)) # Binary data. 96% of file if written as str
     file.write("\n")
@@ -60,41 +60,53 @@ def log_data(file, buff):
         print_imu(imu)
 
 def receive(ser):
-    timeout = 0.015 # ms timeout
+    timeout = 0.015 # timeout in [s]
     time_start = time.time()
     time_curr = time_start
+    done = False
+    data_received = False
     receive_succeeded = False
     num_bytes_available = 0
     buff = bytes(''.encode())
+    HEADER = 0xAA
+    header_count = 0
     while True:
         # First, we wait until we have received some data, or until the timeout
         # has elapsed
-        while((num_bytes_available == 0) and (time_curr - time_start < timeout)):
+        while(num_bytes_available == 0 and 
+            not (data_received and time_curr - time_start >= timeout)):
             time.sleep(0.001)
             time_curr = time.time()
             num_bytes_available = ser.in_waiting
         
-        if((num_bytes_available == 0) and (time_curr - time_start >= timeout)):
+        if(num_bytes_available == 0 and
+            (data_received and time_curr - time_start >= timeout)):
             break
         else:
+            data_received = True
+            
             # If we receive some data, we process it here then go back to
             # waiting for more
-            rawData = ser.read(num_bytes_available)
+            raw_data = ser.read(num_bytes_available)
             for i in range(num_bytes_available):
-                # '\n' is used to terminate packets. If we see this, we need to
-                # reset the buffer since the contents must have been shifted
-                terminated = struct.unpack('<c', rawData[i:i+1])[0] == b'\n'
-                if terminated:
-                    if len(buff) == BUF_SIZE:
-                        # If we get here, we have received a full packet
-                        receive_succeeded = True
-                        break
+                # 1. Find 0xAA 0xAA
+                if header_count < 2:
+                    if struct.unpack('<B', raw_data[i:i+1])[0] == HEADER:
+                        header_count = header_count + 1
                     else:
-                        buff = bytes(''.encode())
+                        header_count = 0
                 else:
-                    buff = buff + rawData[i:i+1]
+                    # 2. Unpack BUF_SIZE bytes and check for termination
+                    buff = buff + raw_data[i:i+1]
+                    done = len(buff) == BUF_SIZE + 1
+                    if done:
+                        # '\n' is used to terminate packets
+                        receive_succeeded = struct.unpack('<c', buff[-1:])[0] == b'\n'
+                        if receive_succeeded:
+                            buff = buff[:-1] # Remove termination character
+                        break
             num_bytes_available = 0
-            if receive_succeeded:
+            if done:
                 break
     assert(not receive_succeeded or len(buff) == BUF_SIZE)
     return (receive_succeeded, buff)
@@ -107,6 +119,7 @@ def record(port, baud, verbose):
     cwd = os.getcwd()
     fname = os.path.join(cwd, fname)
     logString("Creating data file " + fname)
+    first = True
     with open(fname, "wb") as f:
         log_preamble(f)
         logString("Attempting connection to embedded")
@@ -118,6 +131,9 @@ def record(port, baud, verbose):
             try:
                 with serial.Serial(port, baud, timeout=0) as ser:
                     logString("Connected")
+                    if first:
+                        first = False
+                        ser.write('L'.encode()) # L => flash LED
                     while True:
                         success, buff = receive(ser)
                         if success:

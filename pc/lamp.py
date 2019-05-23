@@ -4,8 +4,6 @@
 
 import os
 import sys
-import glob
-import struct
 import numpy as np
 from util import *
 from rx import record
@@ -24,7 +22,6 @@ def main():
         logString("Cannot stream and analyze. Please only choose one of these")
         quit()
     
-    cwd = os.getcwd()
     if analyze_fname:
         logString("Starting analysis")
         analyze(analyze_fname, args['imu'], args['estimate'])

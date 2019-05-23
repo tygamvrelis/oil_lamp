@@ -92,6 +92,7 @@ def parse_args():
 
 IMU_BUF_SIZE = 2*6*4 # 2 IMUs * 6 floats
 BUF_SIZE = IMU_BUF_SIZE + 1 # 1 status byte
+LOGGED_BUF_SIZE = BUF_SIZE + 20 # 20 bytes of plaintext for time + status
 IMU_BASE_IDX = 0
 IMU_LAMP_IDX = 6
 ACC_IDX = 0
@@ -154,12 +155,27 @@ def load_data_from_file(file_name):
         if bin_data[i].decode().strip() == "START":
             idx = i
             break
-    assert(i != -1), "Invalid data file...could not find START marker"
-    bin_data = bin_data[i+1:]
+    assert(idx != -1), "Invalid data file...could not find START marker"
+    bin_data = bin_data[idx+1:]
+    
+    # May need to adjust lines due to data looking like newline character
+    too_small = [(line, idx) for idx, line in enumerate(bin_data) if len(line) != LOGGED_BUF_SIZE]
+    idx_to_del = [e[1] for e in too_small]
+    assert(len(too_small) == 0 or len(too_small) > 1), "Invalid number of lines are too small"
+    if len(too_small) > 0:
+        cur_line, cur_ind = too_small.pop(0)
+    while len(too_small) > 0:
+        line, ind = too_small.pop(0)
+        if len(bin_data[cur_ind]) < LOGGED_BUF_SIZE:
+            bin_data[cur_ind] = bin_data[cur_ind] + line
+        else:
+            cur_ind = ind
+    for index in sorted(idx_to_del, reverse=True):
+        del bin_data[index]
     
     num_samples = len(bin_data)
     
     imu_data = np.ndarray(shape=(int(IMU_BUF_SIZE / 4),num_samples))
     for i in range(num_samples):
-        imu_data[:,i] = decode_data(bin_data[i][15:-1])
+        imu_data[:,i] = decode_data(bin_data[i][20:-1])
     return imu_data, num_samples

@@ -3,12 +3,13 @@
 # Data: May 12, 2019
 
 import numpy as np
+import glob
 import matplotlib.pyplot as plt
 from util import *
 
 class cFilt:
     ''' Complementary filter '''
-    def __init__(self, alpha_p, alpha_r, theta_p=0, theta_r=0):
+    def __init__(self, alpha_p, alpha_r, theta_p=0, theta_r=0, verbose=False):
         '''
         Initializes the filter. Alpha is the factor that weighs the velocity
         integral term, and 1-alpha is the factor that weighs the acceleration
@@ -17,18 +18,21 @@ class cFilt:
         --------
         Arguments
             alpha_p : double
-                Pitch weighting
+                Pitch (outer gimbal) weighting
             alpha_r : double
-                Roll weighting
+                Roll (inner gimbal) weighting
             theta_p : double
                 Initial pitch
             theta_r : double
                 Initial roll
+            verbose : bool
+                Prints debug messages if True
         '''
         self.__alpha_p = alpha_p
         self.__theta_p = theta_p
         self.__alpha_r = alpha_r
         self.__theta_r = theta_r
+        self.__verbose = verbose
     
     def update(self, v, a, dt):
         '''
@@ -42,6 +46,9 @@ class cFilt:
             dt : double
                 Sampling period in milliseconds
         '''
+        if self.__verbose:
+            print(v[0:3], a[0:3])
+
         # Outer gimbal angle (pitch)
         a_term = (1.0 - self.__alpha_p) * np.arctan2(a[X_IDX], a[Z_IDX]) * 180.0 / np.pi
         v_term = self.__alpha_p * (self.__theta_p + v[Y_IDX] * (dt / 1000.0))
@@ -60,11 +67,29 @@ class cFilt:
         '''
         return self.__theta_p, self.__theta_r
 
+# https://stackoverflow.com/questions/6518811/interpolate-nan-values-in-a-numpy-array
+def nan_helper(y):
+    """Helper to handle indices and logical indices of NaNs.
+
+    Input:
+        - y, 1d numpy array with possible NaNs
+    Output:
+        - nans, logical indices of NaNs
+        - index, a function, with signature indices= index(logical_indices),
+          to convert logical indices of NaNs to 'equivalent' indices
+    Example:
+        >>> # linear interpolation of NaNs
+        >>> nans, x= nan_helper(y)
+        >>> y[nans]= np.interp(x(nans), x(~nans), y[~nans])
+    """
+
+    return np.isnan(y), lambda z: z.nonzero()[0]
 
 def analyze(fname, imu_to_plot, estimate):
     make_data_dir()
     if fname == "latest":
-        files = glob.glob(os.path.join(get_data_dir(), + os.sep + '*.dat'))
+        glob_str = os.path.join(get_data_dir(), '*.dat')
+        files = glob.glob(glob_str)
         fname = max(files, key=os.path.getctime)
 
     SAMPLE_RATE = 100.0 # Hz
@@ -106,13 +131,37 @@ def analyze(fname, imu_to_plot, estimate):
         plt.xlabel('Time (s)')
         plt.ylabel('Raw data ($m/s^2$ and $^\circ$)')
         
-        fig_name = os.path.join(get_data_dir(), "raw_" + imu_to_plot + "_" + os.path.splitext(fname)[0] + '.png')
+        fig_name = "raw_" + imu_to_plot + "_"
+        fig_name = fig_name + os.path.splitext(os.path.basename(fname))[0]
+        fig_name = fig_name + '.png'
+        fig_name = os.path.join(get_data_dir(), fig_name)
+        print(fig_name)
         plt.savefig(fig_name)
         logString("Saved fig to {0}".format(fig_name))
         plt.close();
     else:
-        base_filt = cFilt(0.70, 0.70)
-        lamp_filt = cFilt(0.70, 0.70)
+        # TODO: (Tyler) Only do both base and lamp if arg == "both" (i.e. 
+        # TODO:         optimize cases where analyzing individual IMUs)
+        
+        # tau = alpha*dt/(1-alpha)
+        # so alpha = tau/(tau + dt)
+        # Swing period is about 0.51. Use tau = 0.255
+        alpha_p = 0.96226415094
+        alpha_r = 0.96226415094
+        base_filt = cFilt(alpha_p, alpha_r)
+        lamp_filt = cFilt(alpha_p, alpha_r)
+        
+        # TODO: (Tyler) Move this to util
+        # Interpolate NaN, if needed
+        num_base_nans = np.isnan(imu_data[IMU_BASE_IDX,:]).sum()
+        num_lamp_nans = np.isnan(imu_data[IMU_LAMP_IDX,:]).sum()
+        if num_base_nans + num_lamp_nans > 0:
+            logString("Interpolating NaNs (Base: {0}|Lamp: {1})".format(
+                num_base_nans,num_lamp_nans)
+            )
+            for i in range(imu_data.shape[0]):
+                nans, idx = nan_helper(imu_data[i,:])
+                imu_data[i,nans]= np.interp(idx(nans), idx(~nans), imu_data[i,~nans])
         
         OUTER = 0
         INNER = 1
@@ -141,19 +190,21 @@ def analyze(fname, imu_to_plot, estimate):
             if imu_to_plot == "lamp" or imu_to_plot == "both":
                 ax.scatter(t, angles[LAMP_OUTER], c="green", label="Lamp (outer)", s=size)
                 ax.scatter(t, angles[LAMP_INNER], c="gold",  label="Lamp (inner)", s=size)
-            fig_name = estimate + "_" + imu_to_plot + "_" + os.path.splitext(fname)[0] + '.png'
+            fig_name = estimate + "_" + imu_to_plot + "_"
         else:
             # Combine the pitch and roll from each IMU into a single value for each
             angles[OUTER:INNER+1,:] = angles[BASE_OUTER:BASE_INNER+1,:] + angles[LAMP_OUTER:LAMP_INNER+1,:]
             ax.scatter(t, angles[OUTER], c="blue",  label="Outer gimbal", s=size)
             ax.scatter(t, angles[INNER], c="red",   label="Inner gimbal", s=size)
-            fig_name = estimate + "_" + os.path.splitext(fname)[0] + '.png'
+            fig_name = estimate + "_"
         ax.legend()
             
         plt.title('Angles vs time')
         plt.xlabel('Time (s)')
         plt.ylabel('Angle ($^\circ$)')
 
+        fig_name = fig_name + os.path.splitext(os.path.basename(fname))[0]
+        fig_name = fig_name + '.png'
         fig_name = os.path.join(get_data_dir(), fig_name)
         plt.savefig(fig_name)
         logString("Saved fig to {0}".format(fig_name))

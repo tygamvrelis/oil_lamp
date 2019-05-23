@@ -225,28 +225,6 @@ imu_data_t get_data(MPU6050_t* myMPU)
 }
 
 /**
- * @defgroup MPU6050_Driver_Error_Handlers Errata handlers
- * @brief Handles a silicon bug in the I2C module that shows up occasionally
- * @ingroup MPU6050_Driver
- *
- * @details
- * These functions are used as a workaround for an issue where the BUSY flag of
- * the I2C module is erroneously asserted in the hardware (a silicon bug,
- * essentially). By checking the logs for "nan", I have been able to see that
- * this fix indeed will resolve I2C bus conflict. So it is useful to have.
- *
- * Overall, use these functions with EXTREME caution.
- *
- * Resources used for resolution:
- *  - https://electronics.stackexchange.com/questions/267972/i2c-busy-flag-strange-behaviour/281046#281046
- *  - https://community.st.com/thread/35884-cant-reset-i2c-in-stm32f407-to-release-i2c-lines
- *  - https://electronics.stackexchange.com/questions/272427/stm32-busy-flag-is-set-after-i2c-initialization
- *  - http://www.st.com/content/ccc/resource/technical/document/errata_sheet/f5/50/c9/46/56/db/4a/f6/CD00197763.pdf/files/CD00197763.pdf/jcr:content/translations/en.CD00197763.pdf
- *
- * @{
- */
-
-/**
  * @brief  Helper function for generateClocks
  * @param  port Pointer to the SDA port
  * @param  pin The SDA pin number
@@ -279,14 +257,27 @@ static uint8_t wait_for_gpio_state_timeout(
 /**
  * @brief This function bit-bangs the I2C master clock, with the option of
  *        sending stop bits
+ * @details
+ * This function is used as a workaround for an issue where the BUSY flag of
+ * the I2C module is erroneously asserted in the hardware (a silicon bug,
+ * essentially).
+ *
+ * Overall, use with EXTREME caution.
+ *
+ * Resources used for resolution:
+ *  - https://electronics.stackexchange.com/questions/267972/i2c-busy-flag-strange-behaviour/281046#281046
+ *  - https://community.st.com/thread/35884-cant-reset-i2c-in-stm32f407-to-release-i2c-lines
+ *  - https://electronics.stackexchange.com/questions/272427/stm32-busy-flag-is-set-after-i2c-initialization
+ *  - http://www.st.com/content/ccc/resource/technical/document/errata_sheet/f5/50/c9/46/56/db/4a/f6/CD00197763.pdf/files/CD00197763.pdf/jcr:content/translations/en.CD00197763.pdf
+ *
  * @param hi2c Pointer to the I2C handle corresponding to the sensor
  * @param numClocks The number of times to cycle the I2C master clock
  * @param sendStopBits 1 if stop bits are to be sent on SDA
  */
 void generateClocks(
-        I2C_HandleTypeDef* hi2c,
-        uint8_t numClocks,
-        uint8_t sendStopBits
+    I2C_HandleTypeDef* hi2c,
+    uint8_t numClocks,
+    uint8_t sendStopBits
 )
 {
     struct I2C_Module{
@@ -305,8 +296,8 @@ void generateClocks(
 		IMU_BASE_SCL_GPIO_Port
     };
 
-    static struct I2C_Module i2c2module = {
-		&hi2c2,
+    static struct I2C_Module i2c3module = {
+		&hi2c3,
 		IMU_LAMP_SDA_Pin,
 		IMU_LAMP_SDA_GPIO_Port,
 		IMU_LAMP_SCL_Pin,
@@ -318,7 +309,7 @@ void generateClocks(
         i2c = &i2c1module;
     }
     else{
-        i2c = &i2c2module;
+        i2c = &i2c3module;
     }
 
     static uint8_t timeout = 1;
