@@ -24,6 +24,7 @@
 #include "dma.h"
 #include "i2c.h"
 #include "usart.h"
+#include "wwdg.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/

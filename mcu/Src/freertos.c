@@ -29,6 +29,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include "usart.h"
+#include "wwdg.h"
 #include "App/table.h"
 #include "App/sensing.h"
 /* USER CODE END Includes */
@@ -273,6 +274,7 @@ void StartRxTask(void const * argument)
 
   /* USER CODE BEGIN StartRxTask */
     scheduler_has_started = true;
+    MX_WWDG_Init();
     const uint32_t RX_CYCLE_TIME = osKernelSysTickMicroSec(1000);
     TickType_t xLastWakeTime = xTaskGetTickCount();
 
@@ -322,6 +324,7 @@ void StartTxTask(void const * argument)
     for (;;)
     {
         osDelayUntil(&xLastWakeTime, TX_CYCLE_TIME);
+        HAL_WWDG_Refresh(&hwwdg);
 
         // Pack data
         for (uint8_t i = 0; i < MAX_TABLE_IDX; ++i)
@@ -422,6 +425,44 @@ void CameraLEDTmrCallback(void const * argument)
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
+void HAL_WWDG_EarlyWakeupCallback(WWDG_HandleTypeDef *hwwdg)
+{
+//    // Watchdog wants to reset
+//    // Check if I2C is frozen, if so, try to software-reset it. Otherwise, let
+//    // the reset occur.
+    bool reset_lamp = false, reset_base = false;
+    static uint32_t last_tick_entry = 0;
+    uint32_t cur_tick = HAL_GetTick();
+    if (imu_lamp.hi2c->State != HAL_I2C_STATE_READY ||
+        __HAL_I2C_GET_FLAG(imu_lamp.hi2c, I2C_FLAG_BUSY) != RESET)
+    {
+        SET_BIT(imu_lamp.hi2c->Instance->CR1, I2C_CR1_SWRST);
+        asm("nop");
+        CLEAR_BIT(imu_lamp.hi2c->Instance->CR1, I2C_CR1_SWRST);
+        asm("nop");
+        reset_lamp = true;
+    }
+    if (imu_base.hi2c->State != HAL_I2C_STATE_READY ||
+        __HAL_I2C_GET_FLAG(imu_base.hi2c, I2C_FLAG_BUSY) != RESET)
+    {
+        SET_BIT(imu_base.hi2c->Instance->CR1, I2C_CR1_SWRST);
+        asm("nop");
+        CLEAR_BIT(imu_base.hi2c->Instance->CR1, I2C_CR1_SWRST);
+        asm("nop");
+        reset_base = true;
+    }
+    if ((cur_tick - last_tick_entry > 20) && (reset_lamp || reset_base))
+    {
+        // Seems like an I2C driver issue was causing the blockage. As long as
+        // this is happening infrequently, the SWRST above should recover it.
+        // The acceptable time difference above must be greater than the Watchdog
+        // time; otherwise, it could mean that we are only here again because
+        // the previous recovery attempt did not work.
+        HAL_WWDG_Refresh(&hwwdg);
+    }
+    last_tick_entry = cur_tick;
+}
+
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
     if (scheduler_has_started)
