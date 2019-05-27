@@ -1,0 +1,28 @@
+Cable length from MCU to lamp:
+- 3 m
+- Gauge: 24 AWG
+- Capacitance (unit): 50 pF/m
+	- Source for 23 AWG: https://www.extron.com/download/files/specs/UTP_CAT_6_cable_020402.pdf
+- Capacitance (total): 3 m * 50 pF/m = 150 pF
+
+Useful link:
+	- https://electronics.stackexchange.com/questions/35618/i2c-minimum-clock-speed-and-reliability
+	- 300 ns rise time for 400 kHz bus, 1000 ns rise time for 100 kHz bus
+	- Note that we are currently using 400 kHz bus, but 100 kHz would be acceptable for our application as well. It would be good to test with 100 kHz, since it leaves a bigger margin and hence improves robustness
+
+Resistor tests:
+1.
+	- SCL: 220 * 3 = 660 Ohm
+	- SDA: 1120 Ohm
+	- Note: worked great with logic analyzer connected to SDA and SCL, but not acceptable otherwise
+
+2.
+	- SCL: 220 * 3 = 660 Ohm
+	- SDA: 220 * 4 = 880 Ohm
+	- Note: used decoupling capacitor on IMU (ceramic 101 cap)
+
+Working setup:
+	- Pull-up resistors on SDA and SCL:
+		- Best: 660 Ohm
+		- Acceptable: 550 Ohm to 720 Ohm
+	- Capacitor on IMU: ceramic 101 (100 pF)
