@@ -367,7 +367,7 @@ void StartImuBaseTask(void const * argument)
     attachSemaphore(&imu_base, I2C1SemHandle);
     TickType_t xLastWakeTime;
     xLastWakeTime = xTaskGetTickCount();
-    osDelay(TX_PERIOD_MS - 2);
+    osDelay(TX_PERIOD_MS - 3);
     imu_data_t base_data;
     for(;;)
     {
@@ -394,7 +394,7 @@ void StartImuLampTask(void const * argument)
     attachSemaphore(&imu_lamp, I2C2SemHandle);
     TickType_t xLastWakeTime;
     xLastWakeTime = xTaskGetTickCount();
-    osDelay(TX_PERIOD_MS - 2);
+    osDelay(TX_PERIOD_MS - 3);
     imu_data_t lamp_data;
     for(;;)
     {
