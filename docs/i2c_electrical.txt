@@ -8,7 +8,6 @@ Cable length from MCU to lamp:
 Useful link:
 	- https://electronics.stackexchange.com/questions/35618/i2c-minimum-clock-speed-and-reliability
 	- 300 ns rise time for 400 kHz bus, 1000 ns rise time for 100 kHz bus
-	- Note that we are currently using 400 kHz bus, but 100 kHz would be acceptable for our application as well. It would be good to test with 100 kHz, since it leaves a bigger margin and hence improves robustness
 
 Resistor tests:
 1.
