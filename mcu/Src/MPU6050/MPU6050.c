@@ -152,9 +152,11 @@ void attachSemaphore(MPU6050_t* myMPU, osSemaphoreId sem)
 
 int accelReadIT(MPU6050_t* myMPU){
     uint8_t mpu_buff[6];
-    if(HAL_I2C_Mem_Read_IT(myMPU->hi2c, MPU6050_ACCEL_AND_GYRO_ADDR,
+    if(HAL_I2C_Mem_Read_DMA(myMPU->hi2c, MPU6050_ACCEL_AND_GYRO_ADDR,
             MPU6050_ACCEL_X_ADDR_H,
             I2C_MEMADD_SIZE_8BIT, mpu_buff, 6) != HAL_OK){
+        HAL_DMA_Abort_IT(myMPU->hi2c->hdmarx);
+        HAL_DMA_Abort_IT(myMPU->hi2c->hdmatx);
     	generateClocks(myMPU->hi2c, 1, 1);
         myMPU->ax = NAN;
         myMPU->ay = NAN;
@@ -162,6 +164,8 @@ int accelReadIT(MPU6050_t* myMPU){
         return -1;
     }
     if(xSemaphoreTake(myMPU->sem, MAX_SEM_WAIT) != pdTRUE){
+        HAL_DMA_Abort_IT(myMPU->hi2c->hdmarx);
+        HAL_DMA_Abort_IT(myMPU->hi2c->hdmatx);
         myMPU->ax = NAN;
         myMPU->ay = NAN;
         myMPU->az = NAN;
@@ -183,9 +187,11 @@ int accelReadIT(MPU6050_t* myMPU){
 
 int gyroReadIT(MPU6050_t* myMPU){
     uint8_t mpu_buff[6];
-    if(HAL_I2C_Mem_Read_IT(myMPU->hi2c, MPU6050_ACCEL_AND_GYRO_ADDR,
+    if(HAL_I2C_Mem_Read_DMA(myMPU->hi2c, MPU6050_ACCEL_AND_GYRO_ADDR,
             MPU6050_GYRO_X_ADDR_H,
             I2C_MEMADD_SIZE_8BIT, mpu_buff, 6) != HAL_OK){
+        HAL_DMA_Abort_IT(myMPU->hi2c->hdmarx);
+        HAL_DMA_Abort_IT(myMPU->hi2c->hdmatx);
     	generateClocks(myMPU->hi2c, 1, 1);
         myMPU->vx = NAN;
         myMPU->vy = NAN;
@@ -193,6 +199,8 @@ int gyroReadIT(MPU6050_t* myMPU){
         return -1;
     }
     if(xSemaphoreTake(myMPU->sem, MAX_SEM_WAIT) != pdTRUE){
+        HAL_DMA_Abort_IT(myMPU->hi2c->hdmarx);
+        HAL_DMA_Abort_IT(myMPU->hi2c->hdmatx);
         myMPU->vx = NAN;
         myMPU->vy = NAN;
         myMPU->vz = NAN;
