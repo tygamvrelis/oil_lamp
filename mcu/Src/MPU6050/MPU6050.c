@@ -102,12 +102,12 @@ int MPU6050Init(MPU6050_t* myMPU, I2C_HandleTypeDef* hi2c){
     }
 
     // Set I2C module to use 400 kHz speed (pg. 19 of register map)
-//    dataToWrite = 0x0D;
-//    if(HAL_I2C_Mem_Write(myMPU->hi2c, MPU6050_ACCEL_AND_GYRO_ADDR, I2C_MST_CTRL,
-//            I2C_MEMADD_SIZE_8BIT, &dataToWrite, sizeof(dataToWrite), 100)
-//            != HAL_OK){
-//        return -2;
-//    }
+    dataToWrite = 0x0D;
+    if(HAL_I2C_Mem_Write(myMPU->hi2c, MPU6050_ACCEL_AND_GYRO_ADDR, I2C_MST_CTRL,
+            I2C_MEMADD_SIZE_8BIT, &dataToWrite, sizeof(dataToWrite), 100)
+            != HAL_OK){
+        return -2;
+    }
 
     // Check for bus communication essentially. If any function should fail and issue an early return, it would most likely
     // be this one.
