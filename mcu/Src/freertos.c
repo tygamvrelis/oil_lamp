@@ -76,10 +76,10 @@ osTimerId CameraLEDTmrHandle;
 osStaticTimerDef_t CameraLEDTmrControlBlock;
 osMutexId TableLockHandle;
 osStaticMutexDef_t TableLockControlBlock;
-osSemaphoreId I2C2SemHandle;
-osStaticSemaphoreDef_t I2C2SemControlBlock;
-osSemaphoreId I2C1SemHandle;
-osStaticSemaphoreDef_t I2C1SemControlBlock;
+osSemaphoreId LampSemHandle;
+osStaticSemaphoreDef_t LampSemControlBlock;
+osSemaphoreId BaseSemHandle;
+osStaticSemaphoreDef_t BaseSemControlBlock;
 osSemaphoreId TxSemHandle;
 osStaticSemaphoreDef_t TxSemControlBlock;
 osSemaphoreId RxSemHandle;
@@ -200,13 +200,13 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE END RTOS_MUTEX */
 
   /* Create the semaphores(s) */
-  /* definition and creation of I2C2Sem */
-  osSemaphoreStaticDef(I2C2Sem, &I2C2SemControlBlock);
-  I2C2SemHandle = osSemaphoreCreate(osSemaphore(I2C2Sem), 1);
+  /* definition and creation of LampSem */
+  osSemaphoreStaticDef(LampSem, &LampSemControlBlock);
+  LampSemHandle = osSemaphoreCreate(osSemaphore(LampSem), 1);
 
-  /* definition and creation of I2C1Sem */
-  osSemaphoreStaticDef(I2C1Sem, &I2C1SemControlBlock);
-  I2C1SemHandle = osSemaphoreCreate(osSemaphore(I2C1Sem), 1);
+  /* definition and creation of BaseSem */
+  osSemaphoreStaticDef(BaseSem, &BaseSemControlBlock);
+  BaseSemHandle = osSemaphoreCreate(osSemaphore(BaseSem), 1);
 
   /* definition and creation of TxSem */
   osSemaphoreStaticDef(TxSem, &TxSemControlBlock);
@@ -364,7 +364,7 @@ void StartImuBaseTask(void const * argument)
 {
   /* USER CODE BEGIN StartImuBaseTask */
     const uint32_t IMU_CYCLE_TIME = osKernelSysTickMicroSec(IMU_CYCLE_MS * 1000);
-    attachSemaphore(&imu_base, I2C1SemHandle);
+    attachSemaphore(&imu_base, BaseSemHandle);
     TickType_t xLastWakeTime;
     xLastWakeTime = xTaskGetTickCount();
     osDelay(TX_PERIOD_MS - 2);
@@ -391,7 +391,7 @@ void StartImuLampTask(void const * argument)
 {
   /* USER CODE BEGIN StartImuLampTask */
     const uint32_t IMU_CYCLE_TIME = osKernelSysTickMicroSec(IMU_CYCLE_MS * 1000);
-    attachSemaphore(&imu_lamp, I2C2SemHandle);
+    attachSemaphore(&imu_lamp, LampSemHandle);
     TickType_t xLastWakeTime;
     xLastWakeTime = xTaskGetTickCount();
     osDelay(TX_PERIOD_MS - 2);
@@ -503,10 +503,10 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c){
         // Returns the semaphore taken after non-blocking reception ends
         BaseType_t xHigherPriorityTaskWoken = pdFALSE;
         if (hi2c->Instance == I2C3){
-            xSemaphoreGiveFromISR(I2C2SemHandle, &xHigherPriorityTaskWoken);
+            xSemaphoreGiveFromISR(LampSemHandle, &xHigherPriorityTaskWoken);
         }
         else if (hi2c->Instance == I2C1){
-            xSemaphoreGiveFromISR(I2C1SemHandle, &xHigherPriorityTaskWoken);
+            xSemaphoreGiveFromISR(BaseSemHandle, &xHigherPriorityTaskWoken);
         }
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
     }
@@ -518,10 +518,10 @@ void HAL_I2C_MemTxCpltCallback(I2C_HandleTypeDef *hi2c){
         // Returns the semaphore taken after non-blocking transmission ends
         BaseType_t xHigherPriorityTaskWoken = pdFALSE;
         if (hi2c->Instance == I2C3){
-            xSemaphoreGiveFromISR(I2C2SemHandle, &xHigherPriorityTaskWoken);
+            xSemaphoreGiveFromISR(LampSemHandle, &xHigherPriorityTaskWoken);
         }
         else if (hi2c->Instance == I2C1){
-            xSemaphoreGiveFromISR(I2C1SemHandle, &xHigherPriorityTaskWoken);
+            xSemaphoreGiveFromISR(BaseSemHandle, &xHigherPriorityTaskWoken);
         }
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
     }
