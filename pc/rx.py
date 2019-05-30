@@ -55,6 +55,8 @@ def log_data(file, buff):
     file.write(get_imu_bytes(buff)) # Binary data. 96% of file if written as str
     file.write("\n")
     if log_data.n > 0 and log_data.n % 10 == 0:
+        file.flush()
+        os.fsync(file)
         imu = decode_data(buff)
         logString(str(status))
         print_imu(imu)
