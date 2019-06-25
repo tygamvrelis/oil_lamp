@@ -1,7 +1,7 @@
 # Runs calculations for servo requirements, under the following assumptions
 #
 # - A good model for the lamp is a pendulum of length 6.8 [cm] with mass
-#   0.831 [kg]. In reality, the center of mass is probably less than 6.8 [cm]
+#   0.854 [kg]. In reality, the center of mass is probably less than 6.8 [cm]
 #   away from the pivot point, but better to overestimate than underestimate
 # - The maximum deflection the lamp will experience is 40 degrees
 # - The maximum (angular) speed the lamp will experience is that reached by
