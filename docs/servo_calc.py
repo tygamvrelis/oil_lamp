@@ -95,8 +95,9 @@ def compute_spec(arm_len, mass, max_angle, fos, name):
         2.0 * sci.g * (arm_len / 100.0) * (1.0 - np.cos(np.pi * max_angle / 180.0))
     )
     # 3. Same as above but in [deg/s]
-    #    w = v/r = 2*pi*f -> f = (v/r)/(2*pi)
-    v_max_angular = (v_max / (arm_len / 100.0)) * 180.0 / (2 * np.pi)
+    #    w = v/r -> w [rad/s] * (180 / pi) = w [deg/s]
+    v_max_angular = (v_max / (arm_len / 100.0)) * 180.0 / np.pi
+    v_max_60deg = np.round(60.0 / v_max_angular, 2)
     
     T_gravity = np.abs(pendulum_torque(arm_len, mass, max_angle))
     T_dynamic = np.abs(dynamic_torque(arm_len, mass, v_max / (period / 2)))
@@ -106,8 +107,6 @@ def compute_spec(arm_len, mass, max_angle, fos, name):
     T_fos = np.round(T_fos, 3)
     
     P = np.abs(pendulum_force(mass, max_angle) * v_max)
-    P_losses = 1 # Estimate power loss in Watts due to friction etc.
-    P = P + P_losses
     
     print(name)
     print("\tRaw torque: " + str(T_tot) + " [N*m] " +
@@ -117,8 +116,11 @@ def compute_spec(arm_len, mass, max_angle, fos, name):
           "(" + str(np.round(torque_nm_to_kgcm(T_fos), 3)) + " [kg*cm])"
     )
     print("\tRange of motion: at least {0} degrees".format(int(max_angle * 2)))
-    print("\tMax speed: {0} deg/s".format(np.round(v_max_angular, 3)))
-    print("\tPower: {0} [W]".format(np.round(P, 3)))
+    print("\tMax speed: {0} deg/s ({1}sec.60deg)".format(
+            np.round(v_max_angular, 3), v_max_60deg
+        )
+    )
+    print("\tPower: {0} [W] (does not incorporate losses)".format(np.round(P, 3)))
     print("")
 
 
