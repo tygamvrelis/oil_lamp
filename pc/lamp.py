@@ -7,6 +7,7 @@ import sys
 import numpy as np
 from util import *
 from rx import record
+from tx import playback
 from analyze import analyze
 
 def main():
@@ -15,25 +16,24 @@ def main():
     baud = args['baud']
     log = args['log']
     analyze_fname = args['analyze']
-    stream_fname = args['stream']
+    playback_fname = args['playback']
     verbose = args['verbose']
     
-    if stream_fname and analyze_fname:
-        logString("Cannot stream and analyze. Please only choose one of these")
+    if playback_fname and analyze_fname:
+        logString("Cannot playback AND analyze. Please only choose one of these")
         quit()
     
     if analyze_fname:
         logString("Starting analysis")
         analyze(analyze_fname, args['imu'], args['estimate'])
-    elif stream_fname:
-        logString("Stream not implemented")
-        return
+    elif playback_fname:
+        logString("Starting playback")
+        playback(port, baud, playback_fname, verbose)
     elif log:
         logString("Starting recording")
         record(port, baud, verbose)
     else:
         logString("No option selected")
-        return
 
 if __name__ == "__main__":
     try:

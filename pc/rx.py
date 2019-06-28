@@ -16,7 +16,7 @@ def print_imu(data):
     Prints out a numpy vector interpreted as data from the 2 IMUs
     '''
     data = np.round(data, 2)
-    t = PrettyTable(['', 'Base Accel (deg/s)', 'Base Gyro (m/s^2)', 'Lamp Accel (deg/s)', 'Lamp Gyro (m/s^2)'])
+    t = PrettyTable(['', 'Base Accel (m/s^2)', 'Base Gyro (deg/s)', 'Lamp Accel (m/s^2)', 'Lamp Gyro (deg/s)'])
     t.add_row(["Z", data[0], data[3], data[6], data[9]])
     t.add_row(["Y", data[1], data[4], data[7], data[10]])
     t.add_row(["X", data[2], data[5], data[8], data[11]])
@@ -44,6 +44,9 @@ def log_preamble(file):
     file.write(preamble)
                           
 def log_data(file, buff):
+    '''
+    Records data to the log file and syncs log file to disk periodically
+    '''
     try:
         log_data.n += 1
     except AttributeError:
@@ -62,6 +65,9 @@ def log_data(file, buff):
         print_imu(imu)
 
 def receive(ser):
+    '''
+    Receives a single data packet from the MCU
+    '''
     timeout = 0.015 # timeout in [s]
     time_start = time.time()
     time_curr = time_start
@@ -114,6 +120,9 @@ def receive(ser):
     return (receive_succeeded, buff)
 
 def uniquify(file_name):
+    '''
+    Makes a file name unique, if needed
+    '''
     dir_name = os.path.dirname(file_name)
     files = os.listdir(dir_name)
     if len(files) == 0:
@@ -129,6 +138,9 @@ def uniquify(file_name):
     return os.path.join(dir_name, name)
 
 def record(port, baud, verbose):
+    '''
+    Initiates recording mode
+    '''
     logString(list_ports())
     make_data_dir()
     

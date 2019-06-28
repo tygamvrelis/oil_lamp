@@ -76,7 +76,7 @@ def parse_args():
     )
     
     parser.add_argument(
-        '--stream',
+        '--playback',
         help='Streams the specified angle data to the microcontroller for'
              'playback. NOT SUPPORTED YET.',
         default=''
@@ -179,3 +179,19 @@ def load_data_from_file(file_name):
     for i in range(num_samples):
         imu_data[:,i] = decode_data(bin_data[i][20:-1])
     return imu_data, num_samples
+
+def apply_baseline_transformations(data):
+    '''
+    Transforms the raw sensor data to account for the orientation of the IMUs in
+    the setup
+    --------
+    Arguments:
+        data : np.ndarray
+            Array of IMU data
+    '''
+    # Lamp IMU has z pointing downward
+    data[IMU_LAMP_IDX,:] = data[IMU_LAMP_IDX,:] * -1 
+    # TODO (tyler): subtract/add baseline data as necessary to remove DC offsets
+    # Can load these calibration values from a settings file somewhere
+    return data
+    

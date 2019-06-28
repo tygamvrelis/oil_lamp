@@ -5,6 +5,7 @@
 import numpy as np
 import glob
 import matplotlib.pyplot as plt
+from scipy.interpolate import spline
 from util import *
 
 class cFilt:
@@ -82,7 +83,6 @@ def nan_helper(y):
         >>> nans, x= nan_helper(y)
         >>> y[nans]= np.interp(x(nans), x(~nans), y[~nans])
     """
-
     return np.isnan(y), lambda z: z.nonzero()[0]
 
 def analyze(fname, imu_to_plot, estimate):
@@ -94,37 +94,40 @@ def analyze(fname, imu_to_plot, estimate):
 
     SAMPLE_RATE = 100.0 # Hz
     imu_data, num_samples = load_data_from_file(fname)
+    imu_data = apply_baseline_transformations(imu_data)
+    # TODO (tyler): consider generating this time array from the time data that
+    # TODO is logged
     t = np.linspace(0, num_samples / SAMPLE_RATE, num=num_samples, endpoint=False)
 
     fig, ax = plt.subplots()
     size = 2
     if estimate == "none":
         if imu_to_plot == "base" or imu_to_plot == "both":
-            ax.scatter(t, imu_data[IMU_BASE_IDX + ACC_IDX + X_IDX],  c="blue",
-                label="Base Ax", s=size)
-            ax.scatter(t, imu_data[IMU_BASE_IDX + ACC_IDX + Y_IDX],  c="red",
-                label="Base Ay", s=size)
-            ax.scatter(t, imu_data[IMU_BASE_IDX + ACC_IDX + Z_IDX],  c="green",
-                label="Base Az", s=size)
-            ax.scatter(t, imu_data[IMU_BASE_IDX + GYRO_IDX + X_IDX], c="gold",
-                label="Base Vx", s=size)
-            ax.scatter(t, imu_data[IMU_BASE_IDX + GYRO_IDX + Y_IDX], c="black",
-                label="Base Vy", s=size)
-            ax.scatter(t, imu_data[IMU_BASE_IDX + GYRO_IDX + Z_IDX], c="magenta",
-                label="Base Vz", s=size)
+            ax.plot(t, imu_data[IMU_BASE_IDX + ACC_IDX + X_IDX],  c="blue",
+                label="Base Ax")
+            ax.plot(t, imu_data[IMU_BASE_IDX + ACC_IDX + Y_IDX],  c="red",
+                label="Base Ay")
+            ax.plot(t, imu_data[IMU_BASE_IDX + ACC_IDX + Z_IDX],  c="green",
+                label="Base Az")
+            ax.plot(t, imu_data[IMU_BASE_IDX + GYRO_IDX + X_IDX], c="gold",
+                label="Base Vx")
+            ax.plot(t, imu_data[IMU_BASE_IDX + GYRO_IDX + Y_IDX], c="black",
+                label="Base Vy")
+            ax.plot(t, imu_data[IMU_BASE_IDX + GYRO_IDX + Z_IDX], c="magenta",
+                label="Base Vz")
         if imu_to_plot == "lamp" or imu_to_plot == "both":
-            ax.scatter(t, imu_data[IMU_LAMP_IDX + ACC_IDX + X_IDX],  c="blue",
-                label="Lamp Ax", s=size)
-            ax.scatter(t, imu_data[IMU_LAMP_IDX + ACC_IDX + Y_IDX],  c="red",
-                label="Lamp Ay", s=size)
-            ax.scatter(t, imu_data[IMU_LAMP_IDX + ACC_IDX + Z_IDX],  c="green",
-                label="Lamp Az", s=size)
-            ax.scatter(t, imu_data[IMU_LAMP_IDX + GYRO_IDX + X_IDX], c="gold",
-                label="Lamp Vx", s=size)
-            ax.scatter(t, imu_data[IMU_LAMP_IDX + GYRO_IDX + Y_IDX], c="black",
-                label="Lamp Vy", s=size)
-            ax.scatter(t, imu_data[IMU_LAMP_IDX + GYRO_IDX + Z_IDX], c="magenta",
-                label="Lamp Vz", s=size)
+            ax.plot(t, imu_data[IMU_LAMP_IDX + ACC_IDX + X_IDX],  c="blue",
+                label="Lamp Ax")
+            ax.plot(t, imu_data[IMU_LAMP_IDX + ACC_IDX + Y_IDX],  c="red",
+                label="Lamp Ay")
+            ax.plot(t, imu_data[IMU_LAMP_IDX + ACC_IDX + Z_IDX],  c="green",
+                label="Lamp Az")
+            ax.plot(t, imu_data[IMU_LAMP_IDX + GYRO_IDX + X_IDX], c="gold",
+                label="Lamp Vx")
+            ax.plot(t, imu_data[IMU_LAMP_IDX + GYRO_IDX + Y_IDX], c="black",
+                label="Lamp Vy")
+            ax.plot(t, imu_data[IMU_LAMP_IDX + GYRO_IDX + Z_IDX], c="magenta",
+                label="Lamp Vz")
         ax.legend()
         
         plt.title('Raw data vs time')
@@ -185,17 +188,17 @@ def analyze(fname, imu_to_plot, estimate):
         if estimate == "ind_angles":
             # Plot pitch and roll separately for each IMU
             if imu_to_plot == "base" or imu_to_plot == "both":
-                ax.scatter(t, angles[BASE_OUTER], c="blue",  label="Base (outer)", s=size)
-                ax.scatter(t, angles[BASE_INNER], c="red",   label="Base (inner)", s=size)
+                ax.plot(t, angles[BASE_OUTER], c="blue",  label="Base (outer)")
+                ax.plot(t, angles[BASE_INNER], c="red",   label="Base (inner)")
             if imu_to_plot == "lamp" or imu_to_plot == "both":
-                ax.scatter(t, angles[LAMP_OUTER], c="green", label="Lamp (outer)", s=size)
-                ax.scatter(t, angles[LAMP_INNER], c="gold",  label="Lamp (inner)", s=size)
-            fig_name = estimate + "_" + imu_to_plot + "_"
+                ax.plot(t, angles[LAMP_OUTER], c="green", label="Lamp (outer)")
+                ax.plot(t, angles[LAMP_INNER], c="gold",  label="Lamp (inner)")
+            fig_name = estimate + "_" + imu_to_plot + "_imu_"
         else:
             # Combine the pitch and roll from each IMU into a single value for each
             angles[OUTER:INNER+1,:] = angles[BASE_OUTER:BASE_INNER+1,:] + angles[LAMP_OUTER:LAMP_INNER+1,:]
-            ax.scatter(t, angles[OUTER], c="blue",  label="Outer gimbal", s=size)
-            ax.scatter(t, angles[INNER], c="red",   label="Inner gimbal", s=size)
+            ax.plot(t, angles[OUTER], c="blue",  label="Outer gimbal")
+            ax.plot(t, angles[INNER], c="red",   label="Inner gimbal")
             fig_name = estimate + "_"
         ax.legend()
             

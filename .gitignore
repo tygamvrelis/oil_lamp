@@ -102,3 +102,6 @@ RemoteSystemsTempFiles/
 *.snap
 *.index
 *.log
+
+# Other
+*.pyc
