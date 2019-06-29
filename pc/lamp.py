@@ -28,8 +28,7 @@ def main():
     
     if analyze_fname:
         logString("Starting analysis")
-        analyze(analyze_fname, args['imu'], args['estimate'],
-                args['use_baseline_calibration'])
+        analyze(analyze_fname, args['imu'], args['estimate'], args['use_calibration'])
     elif playback_fname:
         logString("Starting playback")
         playback(port, baud, playback_fname, verbose)

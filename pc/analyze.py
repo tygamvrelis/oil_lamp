@@ -51,12 +51,12 @@ class cFilt:
             print(v[0:3], a[0:3])
 
         # Outer gimbal angle (pitch)
-        a_term = (1.0 - self.__alpha_p) * np.arctan2(a[X_IDX], a[Z_IDX]) * 180.0 / np.pi
+        a_term = (1.0 - self.__alpha_p) * np.arctan2(a[X_IDX], -a[Z_IDX]) * 180.0 / np.pi
         v_term = self.__alpha_p * (self.__theta_p + v[Y_IDX] * (dt / 1000.0))
         self.__theta_p = v_term + a_term
         
         # Inner gimbal angle (roll)
-        a_term = (1.0 - self.__alpha_r) * np.arctan2(a[Y_IDX], a[Z_IDX]) * 180.0 / np.pi
+        a_term = (1.0 - self.__alpha_r) * np.arctan2(a[Y_IDX], -a[Z_IDX]) * 180.0 / np.pi
         v_term = self.__alpha_r * (self.__theta_r + v[X_IDX] * (dt / 1000.0))
         self.__theta_r = v_term + a_term
         
@@ -68,24 +68,7 @@ class cFilt:
         '''
         return self.__theta_p, self.__theta_r
 
-# https://stackoverflow.com/questions/6518811/interpolate-nan-values-in-a-numpy-array
-def nan_helper(y):
-    """Helper to handle indices and logical indices of NaNs.
-
-    Input:
-        - y, 1d numpy array with possible NaNs
-    Output:
-        - nans, logical indices of NaNs
-        - index, a function, with signature indices= index(logical_indices),
-          to convert logical indices of NaNs to 'equivalent' indices
-    Example:
-        >>> # linear interpolation of NaNs
-        >>> nans, x= nan_helper(y)
-        >>> y[nans]= np.interp(x(nans), x(~nans), y[~nans])
-    """
-    return np.isnan(y), lambda z: z.nonzero()[0]
-
-def analyze(fname, imu_to_plot, estimate, use_baseline_calibration):
+def analyze(fname, imu_to_plot, estimate, use_calibration):
     make_data_dir()
     if fname == "latest":
         glob_str = os.path.join(get_data_dir(), '*.dat')
@@ -93,7 +76,7 @@ def analyze(fname, imu_to_plot, estimate, use_baseline_calibration):
         fname = max(files, key=os.path.getctime)
 
     SAMPLE_RATE = 100.0 # Hz
-    imu_data, num_samples = load_data_from_file(fname, use_baseline_calibration)
+    imu_data, num_samples = load_data_from_file(fname, use_calibration)
     # TODO (tyler): consider generating this time array from the time data that
     # TODO is logged
     t = np.linspace(0, num_samples / SAMPLE_RATE, num=num_samples, endpoint=False)
@@ -134,8 +117,8 @@ def analyze(fname, imu_to_plot, estimate, use_baseline_calibration):
         plt.ylabel('Raw data ($m/s^2$ and $^\circ$)')
         
         fig_name = "raw_" + imu_to_plot + "_"
-        fig_name = fig_name + os.path.splitext(os.path.basename(fname))[0]
-        fig_name = fig_name + '.png'
+        fig_name += os.path.splitext(os.path.basename(fname))[0]
+        fig_name += '.png'
         fig_name = os.path.join(get_data_dir(), fig_name)
         print(fig_name)
         plt.savefig(fig_name)
@@ -152,18 +135,6 @@ def analyze(fname, imu_to_plot, estimate, use_baseline_calibration):
         alpha_r = 0.96226415094
         base_filt = cFilt(alpha_p, alpha_r)
         lamp_filt = cFilt(alpha_p, alpha_r)
-        
-        # TODO: (Tyler) Move this to util
-        # Interpolate NaN, if needed
-        num_base_nans = np.isnan(imu_data[IMU_BASE_IDX,:]).sum()
-        num_lamp_nans = np.isnan(imu_data[IMU_LAMP_IDX,:]).sum()
-        if num_base_nans + num_lamp_nans > 0:
-            logString("Interpolating NaNs (Base: {0}|Lamp: {1})".format(
-                num_base_nans,num_lamp_nans)
-            )
-            for i in range(imu_data.shape[0]):
-                nans, idx = nan_helper(imu_data[i,:])
-                imu_data[i,nans]= np.interp(idx(nans), idx(~nans), imu_data[i,~nans])
         
         OUTER = 0
         INNER = 1
@@ -205,8 +176,10 @@ def analyze(fname, imu_to_plot, estimate, use_baseline_calibration):
         plt.xlabel('Time (s)')
         plt.ylabel('Angle ($^\circ$)')
 
-        fig_name = fig_name + os.path.splitext(os.path.basename(fname))[0]
-        fig_name = fig_name + '.png'
+        fig_name += os.path.splitext(os.path.basename(fname))[0]
+        if use_calibration:
+            fig_name += "_calibrated"
+        fig_name += '.png'
         fig_name = os.path.join(get_data_dir(), fig_name)
         plt.savefig(fig_name)
         logString("Saved fig to {0}".format(fig_name))
