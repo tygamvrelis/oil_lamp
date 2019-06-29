@@ -119,38 +119,14 @@ def receive(ser):
     assert(not receive_succeeded or len(buff) == BUF_SIZE)
     return (receive_succeeded, buff)
 
-def uniquify(file_name):
-    '''
-    Makes a file name unique, if needed
-    '''
-    dir_name = os.path.dirname(file_name)
-    files = os.listdir(dir_name)
-    if len(files) == 0:
-        return file_name
-    # Remove extensions from names
-    files = [os.path.splitext(name)[0] for name in files]
-    file_name_no_ext = os.path.splitext(os.path.basename(file_name))[0]
-    name = file_name_no_ext
-    idx = 0
-    while name in files:
-        name = file_name_no_ext + "_" + str(idx)
-        idx = idx + 1
-    return os.path.join(dir_name, name)
-
 def record(port, baud, verbose):
     '''
     Initiates recording mode
     '''
     logString(list_ports())
-    # TODO (tyler): store in boot/lamp_data if on Linux
     make_data_dir()
     
-    # TODO (tyler): use "lamp_data.dat" as name if on Linux
-    fname = datetime.now().strftime('data' + os.sep + '%d%m%Y_%H_%M_%S')
-    cwd = os.getcwd()
-    fname = os.path.join(cwd, fname)
-    fname = uniquify(fname)
-    fname = fname + ".dat"
+    fname = get_log_file_name()
     logString("Creating data file " + fname)
     first = True
     with open(fname, "wb") as f:

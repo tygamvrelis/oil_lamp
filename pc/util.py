@@ -10,7 +10,7 @@ import sys
 import struct
 import numpy as np
 import configparser
-    
+
 def logString(userMsg):
     '''
     Prints the desired string to the shell, precedded by the date and time.
@@ -18,6 +18,9 @@ def logString(userMsg):
     print(datetime.now().strftime('%H.%M.%S.%f') + " " + userMsg)
 
 def list_ports():
+    '''
+    Lists the available serial ports
+    '''
     ports = serial.tools.list_ports.comports()
     msg = ""
     if(len(ports) == 0):
@@ -28,6 +31,9 @@ def list_ports():
     return msg
 
 def get_script_path():
+    '''
+    Gets the path where the script is running
+    '''
     return os.path.dirname(os.path.realpath(sys.argv[0]))
 
 def str2bool(v):
@@ -139,11 +145,17 @@ Z_IDX = 0
 Y_IDX = 1
 X_IDX = 2
 def get_imu_bytes(buff):
+    '''
+    Gets the part of the buffer containing IMU data
+    '''
     imu = buff[0:IMU_BUF_SIZE]
     assert(len(imu) == IMU_BUF_SIZE), "Wrong IMU buff size"
     return imu
 
 def get_status_byte(buff):
+    '''
+    Gets the part of the buffer containing the status byte
+    '''
     return buff[-1]
     
 def decode_data(buff):
@@ -162,20 +174,71 @@ def decode_data(buff):
     return np.array(l)
 
 def decode_status(buff):
+    '''
+    Decodes the status byte from binary
+    '''
     assert(len(buff) == BUF_SIZE), "Length is {0}".format(len(buff))
     status = struct.unpack('<B', get_status_byte(buff))[0]
     return status
 
+def is_raspberry_pi():
+    '''
+    Returns True if running on the Raspberry Pi
+    '''
+    return "linux" in sys.platform.lower()
+
 def get_data_dir():
-    cwd = os.getcwd()
-    return os.path.join(cwd, "data")
+    '''
+    Returns the directory path where motion data is stored
+    '''
+    if is_raspberry_pi():
+        return "/boot/lamp_data"
+    else:
+        cwd = os.getcwd()
+        return os.path.join(cwd, "data")
 
 def make_data_dir():
-    cwd = os.getcwd()
+    '''
+    Created the directory for data storage if it doesn't already exist
+    '''
     if not os.path.isdir(get_data_dir()):
-        os.mkdir("data")
+        os.mkdir(get_data_dir())
+
+def uniquify(file_name):
+    '''
+    Makes a file name unique, if needed
+    '''
+    dir_name = os.path.dirname(file_name)
+    files = os.listdir(dir_name)
+    if len(files) == 0:
+        return file_name
+    # Remove extensions from names
+    files = [os.path.splitext(name)[0] for name in files]
+    file_name_no_ext = os.path.splitext(os.path.basename(file_name))[0]
+    name = file_name_no_ext
+    idx = 0
+    while name in files:
+        name = file_name_no_ext + "_" + str(idx)
+        idx = idx + 1
+    return os.path.join(dir_name, name)
+
+def get_log_file_name():
+    '''
+    Gets the name of the file to use for recording data
+    '''
+    if is_raspberry_pi():
+        fname = 'lamp_data'
+    else:
+        fname = datetime.now().strftime('%d%m%Y_%H_%M_%S')
+    fname = os.path.join(get_data_dir(), fname)
+    fname = uniquify(fname)
+    fname = fname + '.dat'
+    return fname
 
 def get_calibration_file_name():
+    '''
+    Returns the name of the file used for storing calibration settings
+    '''
     return 'settings.ini';
 
 def get_calibration_file_preamble():
