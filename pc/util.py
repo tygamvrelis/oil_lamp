@@ -91,7 +91,7 @@ def parse_args():
              ' account for the fact that the IMUs are mounted at angles relative'
              ' to the lamp and base. Only affects analysis and playback modes'
              ' (does not interefere with raw data that is being recorded). Only'
-             ' changed ADDITIVE baseline factor',
+             ' changes ADDITIVE baseline factor',
         default=''
     )
     
@@ -259,15 +259,15 @@ def set_baseline(baseline_fname, verbose):
     lamp_mult, lamp_add_a, base_mult, base_add_a = load_calibration_data()
     
     # Compute new baseline
-    target = np.array([9.81, 0, 0])
+    target = np.array([9.81, 0, 0]) # TODO (tyler): why is this not -9.81?
     # Lamp
     IDX = IMU_LAMP_IDX + ACC_IDX
     imu_data[IDX:IDX+3,:] = lamp_mult.dot(imu_data[IDX:IDX+3,:])
     lamp_med = np.median(imu_data[IDX:IDX+3,:], axis=1)
     lamp_acc_err = np.round(target - lamp_med, 3)
     if verbose:
-        print("Median lamp acceleration values: ", lamp_med)
-        print("\tError: ", lamp_acc_err)
+        logString("Median lamp acceleration values: {0}".format(lamp_med))
+    logString("\tNew lamp calibration values: {0}".format(lamp_acc_err))
     
     # Base
     IDX = IMU_BASE_IDX + ACC_IDX
@@ -275,8 +275,8 @@ def set_baseline(baseline_fname, verbose):
     base_med = np.median(imu_data[IDX:IDX+3,:], axis=1)
     base_acc_err = np.round(target - base_med, 3)
     if verbose:
-        print("Median base acceleration values: ", base_med)
-        print("\tError: ", base_acc_err)
+        logString("Median base acceleration values: {0}".format(base_med))
+    logString("\tNew base calibration values: {0}".format(base_acc_err))
     
     # Update calibration data
     config = configparser.ConfigParser()
@@ -299,7 +299,7 @@ def load_calibration_data():
     config = configparser.ConfigParser()
     config.read(get_calibration_file_name())
     
-    # Equ'n: q' = Aq+b
+    # Equ'n: q' = mq+a
     lamp_mult = np.identity(3)
     lamp_add_a = np.array([0, 0, 0])
 
@@ -308,19 +308,19 @@ def load_calibration_data():
     if len(config.sections()) == 0:
         logString("WARNING: calibration data is empty!")
     else:
-        lamp_mult[0,0] = config['Lamp IMU']['mult_z']
-        lamp_mult[1,1] = config['Lamp IMU']['mult_y']
-        lamp_mult[2,2] = config['Lamp IMU']['mult_x']
-        lamp_add_a[0] = config['Lamp IMU']['add_Az']
-        lamp_add_a[1] = config['Lamp IMU']['add_Ay']
-        lamp_add_a[2] = config['Lamp IMU']['add_Ax']
-        base_mult[0,0] = config['Base IMU']['mult_z']
-        base_mult[1,1] = config['Base IMU']['mult_y']
-        base_mult[2,2] = config['Base IMU']['mult_x']
-        base_add_a[0] = config['Base IMU']['add_Az']
-        base_add_a[1] = config['Base IMU']['add_Ay']
-        base_add_a[2] = config['Base IMU']['add_Ax']
-    
+        lamp_mult[0,0] = float(config['Lamp IMU']['mult_z'])
+        lamp_mult[1,1] = float(config['Lamp IMU']['mult_y'])
+        lamp_mult[2,2] = float(config['Lamp IMU']['mult_x'])
+        lamp_add_a[0]  = float(config['Lamp IMU']['add_Az'])
+        lamp_add_a[1]  = float(config['Lamp IMU']['add_Ay'])
+        lamp_add_a[2]  = float(config['Lamp IMU']['add_Ax'])
+        base_mult[0,0] = float(config['Base IMU']['mult_z'])
+        base_mult[1,1] = float(config['Base IMU']['mult_y'])
+        base_mult[2,2] = float(config['Base IMU']['mult_x'])
+        base_add_a[0]  = float(config['Base IMU']['add_Az'])
+        base_add_a[1]  = float(config['Base IMU']['add_Ay'])
+        base_add_a[2]  = float(config['Base IMU']['add_Ax'])
+        logString("Loaded existing calibration data")
     return lamp_mult, lamp_add_a, base_mult, base_add_a
 
 def apply_baseline_transformations(data):

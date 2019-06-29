@@ -20,8 +20,8 @@ def main():
     baseline_fname = args['set_baseline']
     verbose = args['verbose']
     
-    if (playback_fname and analyze_fname) or
-       (playback_fname and baseline_fname) or
+    if (playback_fname and analyze_fname) or \
+       (playback_fname and baseline_fname) or \
        (analyze_fname and baseline_fname):
         logString("2 or more of: playback, analyze, set_baseline were selected. Please only choose one of these")
         quit()
