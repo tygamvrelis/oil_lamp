@@ -214,6 +214,32 @@ def load_data_from_file(file_name, use_baseline_calibration=False):
     
     return imu_data, num_samples
 
+def get_calibration_file_name():
+    return 'settings.ini';
+
+def get_calibration_file_preamble():
+    '''
+    Writes a comment into the settings file to describe what the constants do.
+    INI file comments are not extracted by configparser, so this has to be
+    added in manually each time we update the settings file
+    '''
+    message = (""
+        "# These constants are added or multiplied to all data loaded for analysis or\n"
+        "# playback. They account for the fact that the IMUs are mounted at angles\n"
+        "# relative to the lamp and base. These constants were derived from a recording\n"
+        "# where the lamp and base were stationary and level.\n"
+        "#\n"
+        "# Example: let Az denote the raw acceleration in the z direction and Az' denote\n"
+        "#     this same acceleration after applying the constants. Then the following\n"
+        "#     relation is true:\n"
+        "#         Az' = Az * mult_z + add_Az\n"
+        "#\n"
+        "# For the gyroscope data, there is no need for offsets since all the data is\n"
+        "# high-pass.\n"
+        "#\n"
+        "# Multiplicative constants are the same for accelerometer and gyroscope\n")
+    return message
+
 def set_baseline(baseline_fname, verbose):
     '''
     Uses data from a file to create a new baseline (only changes additive factor)
@@ -238,7 +264,7 @@ def set_baseline(baseline_fname, verbose):
     IDX = IMU_LAMP_IDX + ACC_IDX
     imu_data[IDX:IDX+3,:] = lamp_mult.dot(imu_data[IDX:IDX+3,:])
     lamp_med = np.median(imu_data[IDX:IDX+3,:], axis=1)
-    lamp_acc_err = target - lamp_med
+    lamp_acc_err = np.round(target - lamp_med, 3)
     if verbose:
         print("Median lamp acceleration values: ", lamp_med)
         print("\tError: ", lamp_acc_err)
@@ -247,20 +273,31 @@ def set_baseline(baseline_fname, verbose):
     IDX = IMU_BASE_IDX + ACC_IDX
     imu_data[IDX:IDX+3,:] = base_mult.dot(imu_data[IDX:IDX+3,:])
     base_med = np.median(imu_data[IDX:IDX+3,:], axis=1)
-    base_acc_err = target - base_med
+    base_acc_err = np.round(target - base_med, 3)
     if verbose:
         print("Median base acceleration values: ", base_med)
         print("\tError: ", base_acc_err)
     
     # Update calibration data
-    #TODO (tyler): update settings.ini
+    config = configparser.ConfigParser()
+    config.read(get_calibration_file_name())
+    config.set('Lamp IMU', 'add_Az', str(lamp_acc_err[0]))
+    config.set('Lamp IMU', 'add_Ay', str(lamp_acc_err[1]))
+    config.set('Lamp IMU', 'add_Ax', str(lamp_acc_err[2]))
+    config.set('Base IMU', 'add_Az', str(base_acc_err[0]))
+    config.set('Base IMU', 'add_Ay', str(base_acc_err[1]))
+    config.set('Base IMU', 'add_Ax', str(base_acc_err[2]))
+    with open(get_calibration_file_name(), 'w') as f:
+        f.write(get_calibration_file_preamble())
+    with open(get_calibration_file_name(), 'a+') as f:
+        config.write(f)
 
 def load_calibration_data():
     '''
     Loads previously-saved calibration data, if it exists'
     '''
     config = configparser.ConfigParser()
-    config.read('settings.ini')
+    config.read(get_calibration_file_name())
     
     # Equ'n: q' = Aq+b
     lamp_mult = np.identity(3)
