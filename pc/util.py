@@ -9,6 +9,7 @@ import os
 import sys
 import struct
 import numpy as np
+import configparser
     
 def logString(userMsg):
     '''
@@ -83,6 +84,27 @@ def parse_args():
     )
 
     parser.add_argument(
+        '--set_baseline',
+        help='Specifies a file to use as a measurement baseline. This works just'
+             ' like the reset button on a scale -- it says THIS is the data'
+             ' recorded when the lamp is completely level. This is used to'
+             ' account for the fact that the IMUs are mounted at angles relative'
+             ' to the lamp and base. Only affects analysis and playback modes'
+             ' (does not interefere with raw data that is being recorded). Only'
+             ' changed ADDITIVE baseline factor',
+        default=''
+    )
+    
+    parser.add_argument(
+        '--use_baseline_calibration',
+        help='Uses the baseline data in settings.ini to adjust the frame of'
+             ' reference to account for IMU orientation relative to the base and'
+             ' lamp, if True. If False, uses vanilla data. Using baseline'
+             ' calibration will not modify raw data from a recording',
+        default=False
+    )
+
+    parser.add_argument(
         '--verbose',
         help='Display extra info/debug messages if True',
         default=False
@@ -109,6 +131,9 @@ def get_status_byte(buff):
     return buff[-1]
     
 def decode_data(buff):
+    '''
+    Converts the binary buffer to floats
+    '''
     l = []
     assert(len(buff) == BUF_SIZE or len(buff) == IMU_BUF_SIZE), "Length is {0}".format(len(buff))
     num_iter = -1
@@ -134,14 +159,17 @@ def make_data_dir():
     if not os.path.isdir(get_data_dir()):
         os.mkdir("data")
 
-def load_data_from_file(file_name):
+def load_data_from_file(file_name, use_baseline_calibration=False):
     '''
     Loads data from a file
 
     ----------
-    Parameters
-    file_name : str
-        Name of the file to load. Example: 07052019_23_28_36.dat.
+    Arguments
+        file_name : str
+            Name of the file to load. Example: 07052019_23_28_36.dat
+        use_baseline_calibration : bool
+            If True, loads the baseline data (if it exists) and applies the
+            transformations to the data just loaded
     '''
 
     fname = os.path.join(get_data_dir(), file_name)
@@ -175,23 +203,113 @@ def load_data_from_file(file_name):
     
     num_samples = len(bin_data)
     
+    # Interpret the binary data as floats
     imu_data = np.ndarray(shape=(int(IMU_BUF_SIZE / 4),num_samples))
     for i in range(num_samples):
         imu_data[:,i] = decode_data(bin_data[i][20:-1])
+    
+    if use_baseline_calibration:
+        # Apply transformations if requested
+        imu_data = apply_baseline_transformations(imu_data)
+    
     return imu_data, num_samples
+
+def set_baseline(baseline_fname, verbose):
+    '''
+    Uses data from a file to create a new baseline (only changes additive factor)
+    --------
+    Arguments:
+        baseline_fname : str
+            The name of the data file to use as a baseline
+        verbose : bool
+            Prints additional messages if True
+    '''
+    # Load data to use for new baseline. Skip first 100 samples or so in order
+    # to reach the steady state filter output
+    imu_data, num_samples = load_data_from_file(baseline_fname, False)
+    imu_data = imu_data[:,100:]
+    
+    # Load existing baseline for the multiplicative factors
+    lamp_mult, lamp_add_a, base_mult, base_add_a = load_calibration_data()
+    
+    # Compute new baseline
+    target = np.array([9.81, 0, 0])
+    # Lamp
+    IDX = IMU_LAMP_IDX + ACC_IDX
+    imu_data[IDX:IDX+3,:] = lamp_mult.dot(imu_data[IDX:IDX+3,:])
+    lamp_med = np.median(imu_data[IDX:IDX+3,:], axis=1)
+    lamp_acc_err = target - lamp_med
+    if verbose:
+        print("Median lamp acceleration values: ", lamp_med)
+        print("\tError: ", lamp_acc_err)
+    
+    # Base
+    IDX = IMU_BASE_IDX + ACC_IDX
+    imu_data[IDX:IDX+3,:] = base_mult.dot(imu_data[IDX:IDX+3,:])
+    base_med = np.median(imu_data[IDX:IDX+3,:], axis=1)
+    base_acc_err = target - base_med
+    if verbose:
+        print("Median base acceleration values: ", base_med)
+        print("\tError: ", base_acc_err)
+    
+    # Update calibration data
+    #TODO (tyler): update settings.ini
+
+def load_calibration_data():
+    '''
+    Loads previously-saved calibration data, if it exists'
+    '''
+    config = configparser.ConfigParser()
+    config.read('settings.ini')
+    
+    # Equ'n: q' = Aq+b
+    lamp_mult = np.identity(3)
+    lamp_add_a = np.array([0, 0, 0])
+
+    base_mult = np.identity(3)
+    base_add_a = np.array([0, 0, 0])
+    if len(config.sections()) == 0:
+        logString("WARNING: calibration data is empty!")
+    else:
+        lamp_mult[0,0] = config['Lamp IMU']['mult_z']
+        lamp_mult[1,1] = config['Lamp IMU']['mult_y']
+        lamp_mult[2,2] = config['Lamp IMU']['mult_x']
+        lamp_add_a[0] = config['Lamp IMU']['add_Az']
+        lamp_add_a[1] = config['Lamp IMU']['add_Ay']
+        lamp_add_a[2] = config['Lamp IMU']['add_Ax']
+        base_mult[0,0] = config['Base IMU']['mult_z']
+        base_mult[1,1] = config['Base IMU']['mult_y']
+        base_mult[2,2] = config['Base IMU']['mult_x']
+        base_add_a[0] = config['Base IMU']['add_Az']
+        base_add_a[1] = config['Base IMU']['add_Ay']
+        base_add_a[2] = config['Base IMU']['add_Ax']
+    
+    return lamp_mult, lamp_add_a, base_mult, base_add_a
 
 def apply_baseline_transformations(data):
     '''
     Transforms the raw sensor data to account for the orientation of the IMUs in
-    the setup
+    the setup -- calibration.
     --------
     Arguments:
         data : np.ndarray
             Array of IMU data
     '''
-    # Lamp IMU has z pointing downward
-    data[IMU_LAMP_IDX,:] = data[IMU_LAMP_IDX,:] * -1 
-    # TODO (tyler): subtract/add baseline data as necessary to remove DC offsets
-    # Can load these calibration values from a settings file somewhere
+    lamp_mult, lamp_add_a, base_mult, base_add_a = load_calibration_data()
+    
+    # Lamp
+    IDX = IMU_LAMP_IDX + ACC_IDX
+    data[IDX:IDX+3,:] = lamp_mult.dot(data[IDX:IDX+3,:]) + lamp_add_a
+    
+    IDX = IMU_LAMP_IDX + GYRO_IDX
+    data[IDX:IDX+3,:] = lamp_mult.dot(data[IDX:IDX+3,:])
+    
+    # Base
+    IDX = IMU_BASE_IDX + ACC_IDX
+    data[IDX:IDX+3,:] = base_mult.dot(data[IDX:IDX+3,:]) + base_add_a
+    
+    IDX = IMU_BASE_IDX + GYRO_IDX
+    data[IDX:IDX+3,:] = base_mult.dot(data[IDX:IDX+3,:])
+
     return data
     

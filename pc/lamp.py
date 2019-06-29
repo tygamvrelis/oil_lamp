@@ -17,18 +17,25 @@ def main():
     log = args['log']
     analyze_fname = args['analyze']
     playback_fname = args['playback']
+    baseline_fname = args['set_baseline']
     verbose = args['verbose']
     
-    if playback_fname and analyze_fname:
-        logString("Cannot playback AND analyze. Please only choose one of these")
+    if (playback_fname and analyze_fname) or
+       (playback_fname and baseline_fname) or
+       (analyze_fname and baseline_fname):
+        logString("2 or more of: playback, analyze, set_baseline were selected. Please only choose one of these")
         quit()
     
     if analyze_fname:
         logString("Starting analysis")
-        analyze(analyze_fname, args['imu'], args['estimate'])
+        analyze(analyze_fname, args['imu'], args['estimate'],
+                args['use_baseline_calibration'])
     elif playback_fname:
         logString("Starting playback")
         playback(port, baud, playback_fname, verbose)
+    elif baseline_fname:
+        logString("Creating baseline")
+        set_baseline(baseline_fname, verbose)
     elif log:
         logString("Starting recording")
         record(port, baud, verbose)

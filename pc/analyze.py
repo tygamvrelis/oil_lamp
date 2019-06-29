@@ -85,7 +85,7 @@ def nan_helper(y):
     """
     return np.isnan(y), lambda z: z.nonzero()[0]
 
-def analyze(fname, imu_to_plot, estimate):
+def analyze(fname, imu_to_plot, estimate, use_baseline_calibration):
     make_data_dir()
     if fname == "latest":
         glob_str = os.path.join(get_data_dir(), '*.dat')
@@ -93,8 +93,7 @@ def analyze(fname, imu_to_plot, estimate):
         fname = max(files, key=os.path.getctime)
 
     SAMPLE_RATE = 100.0 # Hz
-    imu_data, num_samples = load_data_from_file(fname)
-    imu_data = apply_baseline_transformations(imu_data)
+    imu_data, num_samples = load_data_from_file(fname, use_baseline_calibration)
     # TODO (tyler): consider generating this time array from the time data that
     # TODO is logged
     t = np.linspace(0, num_samples / SAMPLE_RATE, num=num_samples, endpoint=False)

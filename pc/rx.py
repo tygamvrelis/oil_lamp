@@ -142,8 +142,10 @@ def record(port, baud, verbose):
     Initiates recording mode
     '''
     logString(list_ports())
+    # TODO (tyler): store in boot/lamp_data if on Linux
     make_data_dir()
     
+    # TODO (tyler): use "lamp_data.dat" as name if on Linux
     fname = datetime.now().strftime('data' + os.sep + '%d%m%Y_%H_%M_%S')
     cwd = os.getcwd()
     fname = os.path.join(cwd, fname)
