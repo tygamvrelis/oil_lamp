@@ -366,18 +366,14 @@ def apply_baseline_transformations(data):
     
     # Lamp
     IDX = IMU_LAMP_IDX + ACC_IDX
-    data[IDX:IDX+3,:] = (
-        lamp_mult.dot(data[IDX:IDX+3,:]).transpose() + lamp_add_a[:,]
-    ).transpose()
+    data[IDX:IDX+3,:] = (lamp_mult.dot(data[IDX:IDX+3,:]).T + lamp_add_a[:,]).T
     
     IDX = IMU_LAMP_IDX + GYRO_IDX
     data[IDX:IDX+3,:] = lamp_mult.dot(data[IDX:IDX+3,:])
     
     # Base
     IDX = IMU_BASE_IDX + ACC_IDX
-    data[IDX:IDX+3,:] = (
-        base_mult.dot(data[IDX:IDX+3,:]).transpose() + base_add_a[:,]
-    ).transpose()
+    data[IDX:IDX+3,:] = (base_mult.dot(data[IDX:IDX+3,:]).T + base_add_a[:,]).T
     
     IDX = IMU_BASE_IDX + GYRO_IDX
     data[IDX:IDX+3,:] = base_mult.dot(data[IDX:IDX+3,:])

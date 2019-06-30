@@ -8,11 +8,21 @@ import os
 # import struct
 import numpy as np
 from util import *
-from analyze import get_angles
+from analyze import get_angles, OUTER, INNER, BASE_OUTER, BASE_INNER, LAMP_OUTER, LAMP_INNER
 
-def transmit(ser, a_outer, a_inner):
+def transmit(ser, a_outer, a_inner, dryrun=False):
     '''
     Sends angle data to the MCU
+    --------
+    Arguments:
+        port : serial.Serial
+            COM port that MCU is connected to
+        a_outer : float
+            Outer gimbal angle
+        a_inner : float
+            Inner gimbal angle
+        dryrun : bool
+            Prints angles to shell if True, otherwise sends to MCU
     '''
     # TODO (tyler): figure out how we want to do this. Should be able to get
     # away with sending 2 bytes (I doubt we need better accuracy than int), but
@@ -20,11 +30,13 @@ def transmit(ser, a_outer, a_inner):
     a_outer = int(np.round(a_outer))
     a_inner = int(np.round(a_inner))
     
-    cmd_id = struct.pack('<c', 'A') # A => Angle payload
-    payload = struct.pack('<B', a_outer) + struct.pack('<B', a_inner)
-    packet = cmd_id + payload
-    
-    ser.write(packet)
+    if dryrun:
+        logString("Outer: {0}|Inner: {1}".format(a_outer, a_inner))
+    else:
+        cmd_id = 'A'.encode() # A => Angle payload
+        payload = struct.pack('<B', a_outer) + struct.pack('<B', a_inner)
+        packet = cmd_id + payload
+        ser.write(packet)
     return
 
 def playback(port, baud, fname, loop, verbose):
@@ -43,9 +55,6 @@ def playback(port, baud, fname, loop, verbose):
         verbose : bool
             Prints additional messages if True
     '''
-    logString("Playback not supported yet")
-    return
-    
     fname = os.path.join(get_data_dir(), fname)
     logString("Loading data file " + fname)
     imu_data, num_samples = load_data_from_file(fname, True)
@@ -70,11 +79,11 @@ def playback(port, baud, fname, loop, verbose):
                 else:
                     logString("Looping is disabled...will quit after sending all angles")
                 while True:
-                    for angle_vec in angles:
+                    for angle_vec in angles.T:
                         outer_angle = angle_vec[BASE_OUTER] + angle_vec[LAMP_OUTER]
                         inner_angle = angle_vec[BASE_INNER] + angle_vec[LAMP_INNER]
                         # Send angles and wait a few ms before sending again
-                        transmit(ser, outer_angle, inner_angle)
+                        transmit(ser, outer_angle, inner_angle, True)
                         tx_cycle.wait()
                     if not loop:
                         return
