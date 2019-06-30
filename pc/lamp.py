@@ -14,7 +14,7 @@ def main():
     args = parse_args()
     port = args['port']
     baud = args['baud']
-    log = args['log']
+    record_mode = args['record']
     analyze_fname = args['analyze']
     playback_fname = args['playback']
     baseline_fname = args['set_baseline']
@@ -23,7 +23,8 @@ def main():
     if (playback_fname and analyze_fname) or \
        (playback_fname and baseline_fname) or \
        (analyze_fname and baseline_fname):
-        logString("2 or more of: playback, analyze, set_baseline were selected. Please only choose one of these")
+        logString("2 or more of: playback, analyze, set_baseline were selected."
+                  " Please only choose one of these")
         quit()
     
     if analyze_fname:
@@ -31,11 +32,11 @@ def main():
         analyze(analyze_fname, args['imu'], args['estimate'], args['use_calibration'])
     elif playback_fname:
         logString("Starting playback")
-        playback(port, baud, playback_fname, verbose)
+        playback(port, baud, playback_fname, args['loop'], verbose)
     elif baseline_fname:
         logString("Creating baseline")
         set_baseline(baseline_fname, verbose)
-    elif log:
+    elif record_mode:
         logString("Starting recording")
         record(port, baud, verbose)
     else:

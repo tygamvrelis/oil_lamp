@@ -122,6 +122,14 @@ def receive(ser):
 def record(port, baud, verbose):
     '''
     Initiates recording mode
+    --------
+    Arguments:
+        port : serial.Serial
+            COM port that MCU is connected to
+        baud : int
+            Symbol rate over COM port
+        verbose : bool
+            Prints additional messages if True
     '''
     logString(list_ports())
     make_data_dir()
@@ -129,7 +137,7 @@ def record(port, baud, verbose):
     fname = get_log_file_name()
     logString("Creating data file " + fname)
     first = True
-    with open(fname, "wb") as f:
+    with open(fname, 'wb') as f:
         log_preamble(f)
         logString("Attempting connection to embedded")
         logString("\tPort: " + port)

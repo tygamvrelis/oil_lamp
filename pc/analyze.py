@@ -4,9 +4,13 @@
 
 import numpy as np
 import glob
-import matplotlib.pyplot as plt
-from scipy.interpolate import spline
 from util import *
+try:
+    import matplotlib.pyplot as plt
+except:
+    # Raspberry Pi doesn't have matplotlib
+    logString("Failed to import matplotlib.pyplot")
+from scipy.interpolate import spline
 
 class cFilt:
     ''' Complementary filter '''
@@ -68,7 +72,57 @@ class cFilt:
         '''
         return self.__theta_p, self.__theta_r
 
+OUTER = 0
+INNER = 1
+BASE_OUTER = 0
+BASE_INNER = 1
+LAMP_OUTER = 2
+LAMP_INNER = 3
+def get_angles(raw_imu_data, num_samples):
+    '''
+    Computes a time series of angles given a time series of raw IMU data
+    '''
+    # tau = alpha*dt/(1-alpha)
+    # so alpha = tau/(tau + dt)
+    # Swing period is about 0.51 [s] and dt is 0.01 [s]. Use tau = 0.255 [s]
+    alpha_p = 0.96226415094
+    alpha_r = 0.96226415094
+    base_filt = cFilt(alpha_p, alpha_r)
+    lamp_filt = cFilt(alpha_p, alpha_r)
+    
+    assert(raw_imu_data.shape[0] == 12), "Invalid IMU data size"
+
+    angles = np.ndarray(shape=(4, num_samples))
+    for i in range(num_samples):
+        angles[BASE_OUTER:BASE_INNER+1,i] = base_filt.update(
+            raw_imu_data[IMU_BASE_IDX + GYRO_IDX:,i],
+            raw_imu_data[IMU_BASE_IDX + ACC_IDX:,i],
+            10
+        )
+        angles[LAMP_OUTER:LAMP_INNER+1,i] = lamp_filt.update(
+            raw_imu_data[IMU_LAMP_IDX + GYRO_IDX:,i],
+            raw_imu_data[IMU_LAMP_IDX + ACC_IDX:,i],
+            10
+        )
+    return angles
+
 def analyze(fname, imu_to_plot, estimate, use_calibration):
+    '''
+    Visualizes logged data
+    --------
+    Arguments:
+        fname : str
+            Name of log file whose data is to be analyzed
+        imu_to_plot : str
+            Indicates whether the data for the base IMU or the lamp IMU is to
+            be analzed, or both
+        estimate : bool
+            Estimates angles if True, otherwise plots raw data
+        use_calibration : bool
+            If True, applies rotations and offsets to the raw data, based on the
+            contents of the .ini files. This can be used to account for the fact
+            that the IMUs are mounted at angles relative to the lamp and base
+    '''
     make_data_dir()
     if fname == "latest":
         glob_str = os.path.join(get_data_dir(), '*.dat')
@@ -120,41 +174,14 @@ def analyze(fname, imu_to_plot, estimate, use_calibration):
         fig_name += os.path.splitext(os.path.basename(fname))[0]
         fig_name += '.png'
         fig_name = os.path.join(get_data_dir(), fig_name)
-        print(fig_name)
         plt.savefig(fig_name)
         logString("Saved fig to {0}".format(fig_name))
         plt.close();
     else:
         # TODO: (Tyler) Only do both base and lamp if arg == "both" (i.e. 
         # TODO:         optimize cases where analyzing individual IMUs)
-        
-        # tau = alpha*dt/(1-alpha)
-        # so alpha = tau/(tau + dt)
-        # Swing period is about 0.51. Use tau = 0.255
-        alpha_p = 0.96226415094
-        alpha_r = 0.96226415094
-        base_filt = cFilt(alpha_p, alpha_r)
-        lamp_filt = cFilt(alpha_p, alpha_r)
-        
-        OUTER = 0
-        INNER = 1
-        BASE_OUTER = 0
-        BASE_INNER = 1
-        LAMP_OUTER = 2
-        LAMP_INNER = 3
-        angles = np.ndarray(shape=(4, num_samples))
-        for i in range(num_samples):
-            angles[BASE_OUTER:BASE_INNER+1,i] = base_filt.update(
-                imu_data[IMU_BASE_IDX + GYRO_IDX:,i],
-                imu_data[IMU_BASE_IDX + ACC_IDX:,i],
-                10
-            )
-            angles[LAMP_OUTER:LAMP_INNER+1,i] = lamp_filt.update(
-                imu_data[IMU_LAMP_IDX + GYRO_IDX:,i],
-                imu_data[IMU_LAMP_IDX + ACC_IDX:,i],
-                10
-            )
-
+    
+        angles = get_angles(imu_data, num_samples)
         if estimate == "ind_angles":
             # Plot pitch and roll separately for each IMU
             if imu_to_plot == "base" or imu_to_plot == "both":
