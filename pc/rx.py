@@ -16,7 +16,7 @@ def print_imu(data):
     Prints out a numpy vector interpreted as data from the 2 IMUs
     '''
     data = np.round(data, 2)
-    t = PrettyTable(['', 'Base Accel (deg/s)', 'Base Gyro (m/s^2)', 'Lamp Accel (deg/s)', 'Lamp Gyro (m/s^2)'])
+    t = PrettyTable(['', 'Base Accel (m/s^2)', 'Base Gyro (deg/s)', 'Lamp Accel (m/s^2)', 'Lamp Gyro (deg/s)'])
     t.add_row(["Z", data[0], data[3], data[6], data[9]])
     t.add_row(["Y", data[1], data[4], data[7], data[10]])
     t.add_row(["X", data[2], data[5], data[8], data[11]])
@@ -44,6 +44,9 @@ def log_preamble(file):
     file.write(preamble)
                           
 def log_data(file, buff):
+    '''
+    Records data to the log file and syncs log file to disk periodically
+    '''
     try:
         log_data.n += 1
     except AttributeError:
@@ -62,6 +65,9 @@ def log_data(file, buff):
         print_imu(imu)
 
 def receive(ser):
+    '''
+    Receives a single data packet from the MCU
+    '''
     timeout = 0.015 # timeout in [s]
     time_start = time.time()
     time_curr = time_start
@@ -113,33 +119,25 @@ def receive(ser):
     assert(not receive_succeeded or len(buff) == BUF_SIZE)
     return (receive_succeeded, buff)
 
-def uniquify(file_name):
-    dir_name = os.path.dirname(file_name)
-    files = os.listdir(dir_name)
-    if len(files) == 0:
-        return file_name
-    # Remove extensions from names
-    files = [os.path.splitext(name)[0] for name in files]
-    file_name_no_ext = os.path.splitext(os.path.basename(file_name))[0]
-    name = file_name_no_ext
-    idx = 0
-    while name in files:
-        name = file_name_no_ext + "_" + str(idx)
-        idx = idx + 1
-    return os.path.join(dir_name, name)
-
 def record(port, baud, verbose):
+    '''
+    Initiates recording mode
+    --------
+    Arguments:
+        port : serial.Serial
+            COM port that MCU is connected to
+        baud : int
+            Symbol rate over COM port
+        verbose : bool
+            Prints additional messages if True
+    '''
     logString(list_ports())
     make_data_dir()
     
-    fname = datetime.now().strftime('data' + os.sep + '%d%m%Y_%H_%M_%S')
-    cwd = os.getcwd()
-    fname = os.path.join(cwd, fname)
-    fname = uniquify(fname)
-    fname = fname + ".dat"
+    fname = get_log_file_name()
     logString("Creating data file " + fname)
     first = True
-    with open(fname, "wb") as f:
+    with open(fname, 'wb') as f:
         log_preamble(f)
         logString("Attempting connection to embedded")
         logString("\tPort: " + port)

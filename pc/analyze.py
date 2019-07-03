@@ -4,8 +4,13 @@
 
 import numpy as np
 import glob
-import matplotlib.pyplot as plt
 from util import *
+try:
+    import matplotlib.pyplot as plt
+except:
+    # Raspberry Pi doesn't have matplotlib
+    logString("Failed to import matplotlib.pyplot")
+from scipy.interpolate import spline
 
 class cFilt:
     ''' Complementary filter '''
@@ -50,12 +55,12 @@ class cFilt:
             print(v[0:3], a[0:3])
 
         # Outer gimbal angle (pitch)
-        a_term = (1.0 - self.__alpha_p) * np.arctan2(a[X_IDX], a[Z_IDX]) * 180.0 / np.pi
+        a_term = (1.0 - self.__alpha_p) * np.arctan2(a[X_IDX], -a[Z_IDX]) * 180.0 / np.pi
         v_term = self.__alpha_p * (self.__theta_p + v[Y_IDX] * (dt / 1000.0))
         self.__theta_p = v_term + a_term
         
         # Inner gimbal angle (roll)
-        a_term = (1.0 - self.__alpha_r) * np.arctan2(a[Y_IDX], a[Z_IDX]) * 180.0 / np.pi
+        a_term = (1.0 - self.__alpha_r) * np.arctan2(a[Y_IDX], -a[Z_IDX]) * 180.0 / np.pi
         v_term = self.__alpha_r * (self.__theta_r + v[X_IDX] * (dt / 1000.0))
         self.__theta_r = v_term + a_term
         
@@ -67,25 +72,57 @@ class cFilt:
         '''
         return self.__theta_p, self.__theta_r
 
-# https://stackoverflow.com/questions/6518811/interpolate-nan-values-in-a-numpy-array
-def nan_helper(y):
-    """Helper to handle indices and logical indices of NaNs.
+OUTER = 0
+INNER = 1
+BASE_OUTER = 0
+BASE_INNER = 1
+LAMP_OUTER = 2
+LAMP_INNER = 3
+def get_angles(raw_imu_data, num_samples):
+    '''
+    Computes a time series of angles given a time series of raw IMU data
+    '''
+    # tau = alpha*dt/(1-alpha)
+    # so alpha = tau/(tau + dt)
+    # Swing period is about 0.51 [s] and dt is 0.01 [s]. Use tau = 0.255 [s]
+    alpha_p = 0.96226415094
+    alpha_r = 0.96226415094
+    base_filt = cFilt(alpha_p, alpha_r)
+    lamp_filt = cFilt(alpha_p, alpha_r)
+    
+    assert(raw_imu_data.shape[0] == 12), "Invalid IMU data size"
 
-    Input:
-        - y, 1d numpy array with possible NaNs
-    Output:
-        - nans, logical indices of NaNs
-        - index, a function, with signature indices= index(logical_indices),
-          to convert logical indices of NaNs to 'equivalent' indices
-    Example:
-        >>> # linear interpolation of NaNs
-        >>> nans, x= nan_helper(y)
-        >>> y[nans]= np.interp(x(nans), x(~nans), y[~nans])
-    """
+    angles = np.ndarray(shape=(4, num_samples))
+    for i in range(num_samples):
+        angles[BASE_OUTER:BASE_INNER+1,i] = base_filt.update(
+            raw_imu_data[IMU_BASE_IDX + GYRO_IDX:,i],
+            raw_imu_data[IMU_BASE_IDX + ACC_IDX:,i],
+            10
+        )
+        angles[LAMP_OUTER:LAMP_INNER+1,i] = lamp_filt.update(
+            raw_imu_data[IMU_LAMP_IDX + GYRO_IDX:,i],
+            raw_imu_data[IMU_LAMP_IDX + ACC_IDX:,i],
+            10
+        )
+    return angles
 
-    return np.isnan(y), lambda z: z.nonzero()[0]
-
-def analyze(fname, imu_to_plot, estimate):
+def analyze(fname, imu_to_plot, estimate, use_calibration):
+    '''
+    Visualizes logged data
+    --------
+    Arguments:
+        fname : str
+            Name of log file whose data is to be analyzed
+        imu_to_plot : str
+            Indicates whether the data for the base IMU or the lamp IMU is to
+            be analzed, or both
+        estimate : bool
+            Estimates angles if True, otherwise plots raw data
+        use_calibration : bool
+            If True, applies rotations and offsets to the raw data, based on the
+            contents of the .ini files. This can be used to account for the fact
+            that the IMUs are mounted at angles relative to the lamp and base
+    '''
     make_data_dir()
     if fname == "latest":
         glob_str = os.path.join(get_data_dir(), '*.dat')
@@ -93,38 +130,40 @@ def analyze(fname, imu_to_plot, estimate):
         fname = max(files, key=os.path.getctime)
 
     SAMPLE_RATE = 100.0 # Hz
-    imu_data, num_samples = load_data_from_file(fname)
+    imu_data, num_samples = load_data_from_file(fname, use_calibration)
+    # TODO (tyler): consider generating this time array from the time data that
+    # TODO is logged
     t = np.linspace(0, num_samples / SAMPLE_RATE, num=num_samples, endpoint=False)
 
     fig, ax = plt.subplots()
     size = 2
     if estimate == "none":
         if imu_to_plot == "base" or imu_to_plot == "both":
-            ax.scatter(t, imu_data[IMU_BASE_IDX + ACC_IDX + X_IDX],  c="blue",
-                label="Base Ax", s=size)
-            ax.scatter(t, imu_data[IMU_BASE_IDX + ACC_IDX + Y_IDX],  c="red",
-                label="Base Ay", s=size)
-            ax.scatter(t, imu_data[IMU_BASE_IDX + ACC_IDX + Z_IDX],  c="green",
-                label="Base Az", s=size)
-            ax.scatter(t, imu_data[IMU_BASE_IDX + GYRO_IDX + X_IDX], c="gold",
-                label="Base Vx", s=size)
-            ax.scatter(t, imu_data[IMU_BASE_IDX + GYRO_IDX + Y_IDX], c="black",
-                label="Base Vy", s=size)
-            ax.scatter(t, imu_data[IMU_BASE_IDX + GYRO_IDX + Z_IDX], c="magenta",
-                label="Base Vz", s=size)
+            ax.plot(t, imu_data[IMU_BASE_IDX + ACC_IDX + X_IDX],  c="blue",
+                label="Base Ax")
+            ax.plot(t, imu_data[IMU_BASE_IDX + ACC_IDX + Y_IDX],  c="red",
+                label="Base Ay")
+            ax.plot(t, imu_data[IMU_BASE_IDX + ACC_IDX + Z_IDX],  c="green",
+                label="Base Az")
+            ax.plot(t, imu_data[IMU_BASE_IDX + GYRO_IDX + X_IDX], c="gold",
+                label="Base Vx")
+            ax.plot(t, imu_data[IMU_BASE_IDX + GYRO_IDX + Y_IDX], c="black",
+                label="Base Vy")
+            ax.plot(t, imu_data[IMU_BASE_IDX + GYRO_IDX + Z_IDX], c="magenta",
+                label="Base Vz")
         if imu_to_plot == "lamp" or imu_to_plot == "both":
-            ax.scatter(t, imu_data[IMU_LAMP_IDX + ACC_IDX + X_IDX],  c="blue",
-                label="Lamp Ax", s=size)
-            ax.scatter(t, imu_data[IMU_LAMP_IDX + ACC_IDX + Y_IDX],  c="red",
-                label="Lamp Ay", s=size)
-            ax.scatter(t, imu_data[IMU_LAMP_IDX + ACC_IDX + Z_IDX],  c="green",
-                label="Lamp Az", s=size)
-            ax.scatter(t, imu_data[IMU_LAMP_IDX + GYRO_IDX + X_IDX], c="gold",
-                label="Lamp Vx", s=size)
-            ax.scatter(t, imu_data[IMU_LAMP_IDX + GYRO_IDX + Y_IDX], c="black",
-                label="Lamp Vy", s=size)
-            ax.scatter(t, imu_data[IMU_LAMP_IDX + GYRO_IDX + Z_IDX], c="magenta",
-                label="Lamp Vz", s=size)
+            ax.plot(t, imu_data[IMU_LAMP_IDX + ACC_IDX + X_IDX],  c="blue",
+                label="Lamp Ax")
+            ax.plot(t, imu_data[IMU_LAMP_IDX + ACC_IDX + Y_IDX],  c="red",
+                label="Lamp Ay")
+            ax.plot(t, imu_data[IMU_LAMP_IDX + ACC_IDX + Z_IDX],  c="green",
+                label="Lamp Az")
+            ax.plot(t, imu_data[IMU_LAMP_IDX + GYRO_IDX + X_IDX], c="gold",
+                label="Lamp Vx")
+            ax.plot(t, imu_data[IMU_LAMP_IDX + GYRO_IDX + Y_IDX], c="black",
+                label="Lamp Vy")
+            ax.plot(t, imu_data[IMU_LAMP_IDX + GYRO_IDX + Z_IDX], c="magenta",
+                label="Lamp Vz")
         ax.legend()
         
         plt.title('Raw data vs time')
@@ -132,70 +171,31 @@ def analyze(fname, imu_to_plot, estimate):
         plt.ylabel('Raw data ($m/s^2$ and $^\circ$)')
         
         fig_name = "raw_" + imu_to_plot + "_"
-        fig_name = fig_name + os.path.splitext(os.path.basename(fname))[0]
-        fig_name = fig_name + '.png'
+        fig_name += os.path.splitext(os.path.basename(fname))[0]
+        fig_name += '.png'
         fig_name = os.path.join(get_data_dir(), fig_name)
-        print(fig_name)
         plt.savefig(fig_name)
         logString("Saved fig to {0}".format(fig_name))
         plt.close();
     else:
         # TODO: (Tyler) Only do both base and lamp if arg == "both" (i.e. 
         # TODO:         optimize cases where analyzing individual IMUs)
-        
-        # tau = alpha*dt/(1-alpha)
-        # so alpha = tau/(tau + dt)
-        # Swing period is about 0.51. Use tau = 0.255
-        alpha_p = 0.96226415094
-        alpha_r = 0.96226415094
-        base_filt = cFilt(alpha_p, alpha_r)
-        lamp_filt = cFilt(alpha_p, alpha_r)
-        
-        # TODO: (Tyler) Move this to util
-        # Interpolate NaN, if needed
-        num_base_nans = np.isnan(imu_data[IMU_BASE_IDX,:]).sum()
-        num_lamp_nans = np.isnan(imu_data[IMU_LAMP_IDX,:]).sum()
-        if num_base_nans + num_lamp_nans > 0:
-            logString("Interpolating NaNs (Base: {0}|Lamp: {1})".format(
-                num_base_nans,num_lamp_nans)
-            )
-            for i in range(imu_data.shape[0]):
-                nans, idx = nan_helper(imu_data[i,:])
-                imu_data[i,nans]= np.interp(idx(nans), idx(~nans), imu_data[i,~nans])
-        
-        OUTER = 0
-        INNER = 1
-        BASE_OUTER = 0
-        BASE_INNER = 1
-        LAMP_OUTER = 2
-        LAMP_INNER = 3
-        angles = np.ndarray(shape=(4, num_samples))
-        for i in range(num_samples):
-            angles[BASE_OUTER:BASE_INNER+1,i] = base_filt.update(
-                imu_data[IMU_BASE_IDX + GYRO_IDX:,i],
-                imu_data[IMU_BASE_IDX + ACC_IDX:,i],
-                10
-            )
-            angles[LAMP_OUTER:LAMP_INNER+1,i] = lamp_filt.update(
-                imu_data[IMU_LAMP_IDX + GYRO_IDX:,i],
-                imu_data[IMU_LAMP_IDX + ACC_IDX:,i],
-                10
-            )
-
+    
+        angles = get_angles(imu_data, num_samples)
         if estimate == "ind_angles":
             # Plot pitch and roll separately for each IMU
             if imu_to_plot == "base" or imu_to_plot == "both":
-                ax.scatter(t, angles[BASE_OUTER], c="blue",  label="Base (outer)", s=size)
-                ax.scatter(t, angles[BASE_INNER], c="red",   label="Base (inner)", s=size)
+                ax.plot(t, angles[BASE_OUTER], c="blue",  label="Base (outer)")
+                ax.plot(t, angles[BASE_INNER], c="red",   label="Base (inner)")
             if imu_to_plot == "lamp" or imu_to_plot == "both":
-                ax.scatter(t, angles[LAMP_OUTER], c="green", label="Lamp (outer)", s=size)
-                ax.scatter(t, angles[LAMP_INNER], c="gold",  label="Lamp (inner)", s=size)
-            fig_name = estimate + "_" + imu_to_plot + "_"
+                ax.plot(t, angles[LAMP_OUTER], c="green", label="Lamp (outer)")
+                ax.plot(t, angles[LAMP_INNER], c="gold",  label="Lamp (inner)")
+            fig_name = estimate + "_" + imu_to_plot + "_imu_"
         else:
             # Combine the pitch and roll from each IMU into a single value for each
             angles[OUTER:INNER+1,:] = angles[BASE_OUTER:BASE_INNER+1,:] + angles[LAMP_OUTER:LAMP_INNER+1,:]
-            ax.scatter(t, angles[OUTER], c="blue",  label="Outer gimbal", s=size)
-            ax.scatter(t, angles[INNER], c="red",   label="Inner gimbal", s=size)
+            ax.plot(t, angles[OUTER], c="blue",  label="Outer gimbal")
+            ax.plot(t, angles[INNER], c="red",   label="Inner gimbal")
             fig_name = estimate + "_"
         ax.legend()
             
@@ -203,8 +203,10 @@ def analyze(fname, imu_to_plot, estimate):
         plt.xlabel('Time (s)')
         plt.ylabel('Angle ($^\circ$)')
 
-        fig_name = fig_name + os.path.splitext(os.path.basename(fname))[0]
-        fig_name = fig_name + '.png'
+        fig_name += os.path.splitext(os.path.basename(fname))[0]
+        if use_calibration:
+            fig_name += "_calibrated"
+        fig_name += '.png'
         fig_name = os.path.join(get_data_dir(), fig_name)
         plt.savefig(fig_name)
         logString("Saved fig to {0}".format(fig_name))
