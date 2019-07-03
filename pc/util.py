@@ -10,6 +10,7 @@ import sys
 import struct
 import numpy as np
 import configparser
+import time
 
 def logString(userMsg):
     '''
@@ -97,21 +98,6 @@ def parse_args():
     )
     
     parser.add_argument(
-        '--playback',
-        help='Streams the specified angle data to the microcontroller for'
-             ' playback. NOT SUPPORTED YET.',
-        default=''
-    )
-    
-    parser.add_argument(
-        '--loop',
-        help='(playback option) If we go through all the angles, begin again if'
-             ' this is True. Otherwise, quit.',
-        type=str2bool,
-        default=True
-    )
-
-    parser.add_argument(
         '--set_baseline',
         help='(analyze option) Specifies a file to use for generating'
              ' calibration offsets. This can be used to account for the IMUs'
@@ -125,7 +111,22 @@ def parse_args():
              ' account for IMU orientation relative to the base and lamp, if '
              ' True',
         type=str2bool,
-        default=False
+        default=True
+    )
+    
+    parser.add_argument(
+        '--playback',
+        help='Streams the specified angle data to the microcontroller for'
+             ' playback. NOT SUPPORTED YET.',
+        default=''
+    )
+    
+    parser.add_argument(
+        '--loop',
+        help='(playback option) If we go through all the angles, begin again if'
+             ' this is True. Otherwise, quit.',
+        type=str2bool,
+        default=True
     )
 
     parser.add_argument(
