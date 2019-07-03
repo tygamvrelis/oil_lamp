@@ -60,7 +60,7 @@ class cFilt:
         self.__theta_p = v_term + a_term
         
         # Inner gimbal angle (roll)
-        a_term = (1.0 - self.__alpha_r) * np.arctan2(a[Y_IDX], -a[Z_IDX]) * 180.0 / np.pi
+        a_term = (1.0 - self.__alpha_r) * np.arctan2(-a[Y_IDX], -a[Z_IDX]) * 180.0 / np.pi
         v_term = self.__alpha_r * (self.__theta_r + v[X_IDX] * (dt / 1000.0))
         self.__theta_r = v_term + a_term
         
