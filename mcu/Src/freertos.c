@@ -46,10 +46,12 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-#define BUF_SIZE     (2 + MAX_TABLE_IDX * sizeof(imu_data_t) + 2)
+#define BUF_SIZE     (2 + MAX_TABLE_IDX + 2)
 #define BUF_HEADER_1 0
 #define BUF_HEADER_2 1
 #define BUF_IMU      2
+#define BUF_LAMP_IMU (2 + sizeof(imu_data_t))
+#define BUF_BASE_IMU 2
 #define BUF_STATUS   (BUF_SIZE - 2)
 #define BUF_FOOTER   (BUF_SIZE - 1)
 /* USER CODE END PM */
@@ -327,10 +329,8 @@ void StartTxTask(void const * argument)
         HAL_WWDG_Refresh(&hwwdg);
 
         // Pack data
-        for (uint8_t i = 0; i < MAX_TABLE_IDX; ++i)
-        {
-            read_table(i, (float*)&buf[BUF_IMU + i * sizeof(imu_data_t)], sizeof(imu_data_t));
-        }
+        read_table(TABLE_IDX_BASE_DATA, (uint8_t*)&buf[BUF_BASE_IMU], sizeof(imu_data_t));
+        read_table(TABLE_IDX_LAMP_DATA, (uint8_t*)&buf[BUF_LAMP_IMU], sizeof(imu_data_t));
 
         // Add camera synch flag if needed
         status = 0;
@@ -375,7 +375,7 @@ void StartImuBaseTask(void const * argument)
         accelReadIT(&imu_base);
         gyroReadIT(&imu_base);
         base_data = get_data(&imu_base);
-        write_table(TABLE_IDX_BASE_DATA, (float*)&base_data, sizeof(imu_data_t));
+        write_table(TABLE_IDX_BASE_DATA, (uint8_t*)&base_data, sizeof(imu_data_t));
     }
   /* USER CODE END StartImuBaseTask */
 }
@@ -402,7 +402,7 @@ void StartImuLampTask(void const * argument)
         accelReadIT(&imu_lamp);
         gyroReadIT(&imu_lamp);
         lamp_data = get_data(&imu_lamp);
-        write_table(TABLE_IDX_LAMP_DATA, (float*)&lamp_data, sizeof(imu_data_t));
+        write_table(TABLE_IDX_LAMP_DATA, (uint8_t*)&lamp_data, sizeof(imu_data_t));
     }
   /* USER CODE END StartImuLampTask */
 }
