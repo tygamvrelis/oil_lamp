@@ -99,19 +99,28 @@ def parse_args():
     
     parser.add_argument(
         '--set_baseline',
-        help='(analyze option) Specifies a file to use for generating'
-             ' calibration offsets. This can be used to account for the IMUs'
-             ' being mounted at angles relative to the lamp and base.',
+        help=' Specifies a file to use for generating calibration offsets. This '
+             ' can be used to account for the IMUs being mounted at angles '
+             ' relative to the lamp and base.',
         default=''
     )
     
     parser.add_argument(
         '--use_calibration',
-        help='(analyze option) Uses the calibration data in settings.ini to '
+        help='(set_baseline option) Uses the calibration data in settings.ini to '
              ' account for IMU orientation relative to the base and lamp, if '
              ' True',
         type=str2bool,
         default=True
+    )
+    
+    parser.add_argument(
+        '--use_legacy_sign_convention',
+        help='(analyze, playback, and set_baseline option) Set this to True for '
+             ' data recorded prior to July 2019. Ignore for data recorded after '
+             ' this',
+        type=str2bool,
+        default=False
     )
     
     parser.add_argument(
@@ -268,13 +277,17 @@ def get_calibration_file_preamble():
         "# Multiplicative constants are the same for accelerometer and gyroscope\n")
     return message
 
-def set_baseline(baseline_fname, verbose):
+def set_baseline(baseline_fname, use_legacy_sign_convention, verbose):
     '''
     Uses data from a file to create a new baseline (only changes additive factor)
     --------
     Arguments:
         baseline_fname : str
             The name of the data file to use as a baseline
+        use_legacy_sign_convention : bool
+            If True, transforms the data set from the old acceleration sign
+            convention to the new one. Meant for data sets recorded prior to
+            July 2019
         verbose : bool
             Prints additional messages if True
     '''
@@ -284,7 +297,7 @@ def set_baseline(baseline_fname, verbose):
     imu_data = imu_data[:,100:]
     
     # Load existing baseline for the multiplicative factors
-    lamp_mult, lamp_add_a, base_mult, base_add_a = load_calibration_data()
+    lamp_mult, lamp_add_a, base_mult, base_add_a = load_calibration_data(use_legacy_sign_convention)
     
     # Compute new baseline
     target = np.array([-9.81, 0, 0])
@@ -323,9 +336,15 @@ def set_baseline(baseline_fname, verbose):
     with open(get_calibration_file_name(), 'a+') as f:
         config.write(f)
 
-def load_calibration_data():
+def load_calibration_data(use_legacy_sign_convention=False):
     '''
-    Loads previously-saved calibration data, if it exists'
+    Loads previously-saved calibration data, if it exists
+    --------
+    Arguments
+        use_legacy_sign_convention : bool
+            If True, adjusts the calibration transformations to account for the
+            legacy sign convention. This is meant for data sets recorded prior
+            to July 2019
     '''
     config = configparser.ConfigParser()
     config.read(get_calibration_file_name())
@@ -352,9 +371,12 @@ def load_calibration_data():
         base_add_a[1]  = float(config['Base IMU']['add_ay'])
         base_add_a[2]  = float(config['Base IMU']['add_ax'])
         logString("Loaded existing calibration data")
+    if use_legacy_sign_convention:
+        lamp_mult *= -1.0
+        base_mult *= -1.0
     return lamp_mult, lamp_add_a, base_mult, base_add_a
 
-def apply_baseline_transformations(data):
+def apply_baseline_transformations(data, use_legacy_sign_convention):
     '''
     Transforms the raw sensor data to account for the orientation of the IMUs in
     the setup -- calibration.
@@ -362,8 +384,12 @@ def apply_baseline_transformations(data):
     Arguments:
         data : np.ndarray
             Array of IMU data
+        use_legacy_sign_convention : bool
+            If True, adjusts the calibration transformations to account for the
+            legacy sign convention. This is meant for data sets recorded prior
+            to July 2019
     '''
-    lamp_mult, lamp_add_a, base_mult, base_add_a = load_calibration_data()
+    lamp_mult, lamp_add_a, base_mult, base_add_a = load_calibration_data(use_legacy_sign_convention)
     
     # Lamp
     IDX = IMU_LAMP_IDX + ACC_IDX
@@ -378,6 +404,26 @@ def apply_baseline_transformations(data):
     
     IDX = IMU_BASE_IDX + GYRO_IDX
     data[IDX:IDX+3,:] = base_mult.dot(data[IDX:IDX+3,:])
+
+    return data
+
+def apply_legacy_sign_convention(data):
+    '''
+    Data recorded before July 2019 used the opposite sign convention for the
+    acceleration vector. This function is meant to operate on data sets recorded
+    before July 2019 to make them compatible with the rest of the code.
+    --------
+    Arguments:
+        data : np.ndarray
+            Array of IMU data
+    '''
+    # Lamp
+    IDX = IMU_LAMP_IDX + ACC_IDX
+    data[IDX:IDX+3,:] = -1.0 * data[IDX:IDX+3,:]
+
+    # Base
+    IDX = IMU_BASE_IDX + ACC_IDX
+    data[IDX:IDX+3,:] = -1.0 * data[IDX:IDX+3,:]
 
     return data
 
@@ -398,7 +444,7 @@ def nan_helper(y):
     """
     return np.isnan(y), lambda z: z.nonzero()[0]
 
-def load_data_from_file(file_name, use_calibration=False):
+def load_data_from_file(file_name, use_calibration=False, interp_nan=True, use_legacy_sign_convention=False):
     '''
     Loads data from a file
 
@@ -406,9 +452,15 @@ def load_data_from_file(file_name, use_calibration=False):
     Arguments
         file_name : str
             Name of the file to load. Example: 07052019_23_28_36.dat
+        interp_nan : bool
+            Interpolates nans if True
         use_baseline_calibration : bool
             If True, loads the baseline data (if it exists) and applies the
             transformations to the data just loaded
+        use_legacy_sign_convention : bool
+            If True, transforms the data set from the old acceleration sign
+            convention to the new one. Meant for data sets recorded prior to
+            July 2019
     '''
 
     fname = os.path.join(get_data_dir(), file_name)
@@ -447,20 +499,23 @@ def load_data_from_file(file_name, use_calibration=False):
     for i in range(num_samples):
         imu_data[:,i] = decode_data(bin_data[i][20:-1])
     
-    # Interpolate NaN, if needed
-    num_base_nans = np.isnan(imu_data[IMU_BASE_IDX,:]).sum()
-    num_lamp_nans = np.isnan(imu_data[IMU_LAMP_IDX,:]).sum()
-    if num_base_nans + num_lamp_nans > 0:
-        logString("Interpolating NaNs (Base: {0}|Lamp: {1})".format(
-            num_base_nans,num_lamp_nans)
-        )
-        for i in range(imu_data.shape[0]):
-            nans, idx = nan_helper(imu_data[i,:])
-            imu_data[i,nans]= np.interp(idx(nans), idx(~nans), imu_data[i,~nans])
+    # Interpolate NaN, if requested and needed
+    if interp_nan:
+        num_base_nans = np.isnan(imu_data[IMU_BASE_IDX,:]).sum()
+        num_lamp_nans = np.isnan(imu_data[IMU_LAMP_IDX,:]).sum()
+        if num_base_nans + num_lamp_nans > 0:
+            logString("Interpolating NaNs (Base: {0}|Lamp: {1})".format(
+                num_base_nans,num_lamp_nans)
+            )
+            for i in range(imu_data.shape[0]):
+                nans, idx = nan_helper(imu_data[i,:])
+                imu_data[i,nans]= np.interp(idx(nans), idx(~nans), imu_data[i,~nans])
     
+    # Apply transformations if requested
     if use_calibration:
-        # Apply transformations if requested
-        imu_data = apply_baseline_transformations(imu_data)
+        imu_data = apply_baseline_transformations(imu_data, use_legacy_sign_convention)
+    elif use_legacy_sign_convention:
+        imu_data = apply_legacy_sign_convention(imu_data)
     
     return imu_data, num_samples
 

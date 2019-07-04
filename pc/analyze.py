@@ -60,7 +60,7 @@ class cFilt:
         self.__theta_p = v_term + a_term
         
         # Inner gimbal angle (roll)
-        a_term = (1.0 - self.__alpha_r) * np.arctan2(a[Y_IDX], -a[Z_IDX]) * 180.0 / np.pi
+        a_term = (1.0 - self.__alpha_r) * np.arctan2(-a[Y_IDX], -a[Z_IDX]) * 180.0 / np.pi
         v_term = self.__alpha_r * (self.__theta_r + v[X_IDX] * (dt / 1000.0))
         self.__theta_r = v_term + a_term
         
@@ -106,7 +106,7 @@ def get_angles(raw_imu_data, num_samples):
         )
     return angles
 
-def analyze(fname, imu_to_plot, estimate, use_calibration):
+def analyze(fname, imu_to_plot, estimate, use_calibration, use_legacy_sign_convention):
     '''
     Visualizes logged data
     --------
@@ -122,6 +122,10 @@ def analyze(fname, imu_to_plot, estimate, use_calibration):
             If True, applies rotations and offsets to the raw data, based on the
             contents of the .ini files. This can be used to account for the fact
             that the IMUs are mounted at angles relative to the lamp and base
+        use_legacy_sign_convention : bool
+            If True, transforms the data set from the old acceleration sign
+            convention to the new one. Meant for data sets recorded prior to
+            July 2019
     '''
     make_data_dir()
     if fname == "latest":
@@ -130,7 +134,7 @@ def analyze(fname, imu_to_plot, estimate, use_calibration):
         fname = max(files, key=os.path.getctime)
 
     SAMPLE_RATE = 100.0 # Hz
-    imu_data, num_samples = load_data_from_file(fname, use_calibration)
+    imu_data, num_samples = load_data_from_file(fname, use_calibration=use_calibration, use_legacy_sign_convention=use_legacy_sign_convention)
     # TODO (tyler): consider generating this time array from the time data that
     # TODO is logged
     t = np.linspace(0, num_samples / SAMPLE_RATE, num=num_samples, endpoint=False)

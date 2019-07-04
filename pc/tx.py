@@ -39,7 +39,7 @@ def transmit(ser, a_outer, a_inner, dryrun=False):
         ser.write(packet)
     return
 
-def playback(port, baud, fname, loop, verbose):
+def playback(port, baud, fname, loop, use_legacy_sign_convention, verbose):
     '''
     Initiates playback mode
     --------
@@ -52,12 +52,16 @@ def playback(port, baud, fname, loop, verbose):
             Name of log file used to derive angles
         loop : bool
             Determines whether to quit or restart after sending all angles
+        use_legacy_sign_convention : bool
+            If True, transforms the data set from the old acceleration sign
+            convention to the new one. Meant for data sets recorded prior to
+            July 2019
         verbose : bool
             Prints additional messages if True
     '''
     fname = os.path.join(get_data_dir(), fname)
     logString("Loading data file " + fname)
-    imu_data, num_samples = load_data_from_file(fname, True)
+    imu_data, num_samples = load_data_from_file(fname, use_calibration=True, use_legacy_sign_convention=use_legacy_sign_convention)
     angles = get_angles(imu_data, num_samples)
     
     logString(list_ports())

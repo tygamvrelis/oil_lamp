@@ -174,13 +174,13 @@ int accelReadIT(MPU6050_t* myMPU){
 
     // Process data; scale to physical units
     int16_t temp = (mpu_buff[0] << 8 | mpu_buff[1]);
-    myMPU->ax = (temp * MPU6050_ACCEL_FULL_SCALE / (32767.0));
+    myMPU->ax = -1.0 * (temp * MPU6050_ACCEL_FULL_SCALE / (32767.0));
 
     temp = (mpu_buff[2] << 8 | mpu_buff[3]);
-    myMPU->ay = (temp * MPU6050_ACCEL_FULL_SCALE / (32767.0));
+    myMPU->ay = -1.0 * (temp * MPU6050_ACCEL_FULL_SCALE / (32767.0));
 
     temp = (mpu_buff[4] << 8 | mpu_buff[5]);
-    myMPU->az = (temp * MPU6050_ACCEL_FULL_SCALE / (32767.0));
+    myMPU->az = -1.0 * (temp * MPU6050_ACCEL_FULL_SCALE / (32767.0));
 
     return 1;
 }

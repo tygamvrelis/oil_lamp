@@ -29,13 +29,13 @@ def main():
     
     if analyze_fname:
         logString("Starting analysis")
-        analyze(analyze_fname, args['imu'], args['estimate'], args['use_calibration'])
+        analyze(analyze_fname, args['imu'], args['estimate'], args['use_calibration'], args['use_legacy_sign_convention'])
     elif playback_fname:
         logString("Starting playback")
-        playback(port, baud, playback_fname, args['loop'], verbose)
+        playback(port, baud, playback_fname, args['loop'], args['use_legacy_sign_convention'], verbose)
     elif baseline_fname:
         logString("Creating baseline")
-        set_baseline(baseline_fname, verbose)
+        set_baseline(baseline_fname, args['use_legacy_sign_convention'], verbose)
     elif record_mode:
         logString("Starting recording")
         record(port, baud, verbose)
