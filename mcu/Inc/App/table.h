@@ -42,9 +42,19 @@ typedef enum
 bool write_table(idx_t idx, uint8_t* src, size_t num);
 
 /**
+ * @brief Write a single byte (src) into the table at the specified index
+ */
+bool write_byte_to_table(idx_t idx, uint8_t src);
+
+/**
  * @brief Read num bytes from the table at the specified index into dest
  */
 bool read_table(idx_t idx, uint8_t* dest, size_t num);
+
+/**
+ * @brief Read a single byte from the table at the specified index into dest
+ */
+bool read_byte_from_table(idx_t idx, uint8_t* dest);
 
 /**
  * @}

@@ -70,6 +70,9 @@ osStaticThreadDef_t TxTaskControlBlock;
 osThreadId ImuHandle;
 uint32_t ImuTaskBuffer[ 128 ];
 osStaticThreadDef_t ImuTaskControlBlock;
+osThreadId ControlHandle;
+uint32_t ControlTaskBuffer[ 128 ];
+osStaticThreadDef_t ControlTaskControlBlock;
 osTimerId StatusLEDTmrHandle;
 osStaticTimerDef_t StatusLEDTmrControlBlock;
 osTimerId CameraLEDTmrHandle;
@@ -117,12 +120,12 @@ inline void blink_camera_led()
     set_camera_led_state(CAMERA_LED_ON);
     osTimerStart(CameraLEDTmrHandle, 100);
 }
-
 /* USER CODE END FunctionPrototypes */
 
 void StartRxTask(void const * argument);
 void StartTxTask(void const * argument);
 void StartImuTask(void const * argument);
+void StartControlTask(void const * argument);
 void StatusLEDTmrCallback(void const * argument);
 void CameraLEDTmrCallback(void const * argument);
 
@@ -232,6 +235,10 @@ void MX_FREERTOS_Init(void) {
   osThreadStaticDef(Imu, StartImuTask, osPriorityNormal, 0, 128, ImuTaskBuffer, &ImuTaskControlBlock);
   ImuHandle = osThreadCreate(osThread(Imu), NULL);
 
+  /* definition and creation of Control */
+  osThreadStaticDef(Control, StartControlTask, osPriorityNormal, 0, 128, ControlTaskBuffer, &ControlTaskControlBlock);
+  ControlHandle = osThreadCreate(osThread(Control), NULL);
+
   /* USER CODE BEGIN RTOS_THREADS */
     /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -250,7 +257,6 @@ void StartRxTask(void const * argument)
 
   /* USER CODE BEGIN StartRxTask */
     scheduler_has_started = true;
-    MX_WWDG_Init();
     const uint32_t RX_CYCLE_TIME = osKernelSysTickMicroSec(1000);
     TickType_t xLastWakeTime = xTaskGetTickCount();
 
@@ -265,6 +271,7 @@ void StartRxTask(void const * argument)
         CMD_ANGLE_INNER
     } parse_state = CMD_NONE;
 
+    MX_WWDG_Init();
     HAL_UART_Receive_DMA(&huart2, rx_buff, sizeof(rx_buff));
     for(;;)
     {
@@ -300,11 +307,11 @@ void StartRxTask(void const * argument)
                     parse_state = CMD_ANGLE_OUTER;
                     break;
                 case CMD_ANGLE_OUTER:
-                    write_table(TABLE_IDX_OUTER_GIMBAL_ANGLE, &data, 1);
+                    write_byte_to_table(TABLE_IDX_OUTER_GIMBAL_ANGLE, data);
                     parse_state = CMD_ANGLE_INNER;
                     break;
                 case CMD_ANGLE_INNER:
-                    write_table(TABLE_IDX_INNER_GIMBAL_ANGLE, &data, 1);
+                    write_byte_to_table(TABLE_IDX_INNER_GIMBAL_ANGLE, data);
                     parse_state = CMD_NONE;
                     break;
                 default:
@@ -399,6 +406,31 @@ void StartImuTask(void const * argument)
         write_table(TABLE_IDX_BASE_DATA, (uint8_t*)&imu_data, sizeof(imu_data_t));
     }
   /* USER CODE END StartImuTask */
+}
+
+/* USER CODE BEGIN Header_StartControlTask */
+/**
+* @brief Function implementing the Control thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartControlTask */
+void StartControlTask(void const * argument)
+{
+  /* USER CODE BEGIN StartControlTask */
+    const uint32_t CONTROL_CYCLE_TIME = osKernelSysTickMicroSec(CONTROL_CYCLE_MS * 1000);
+    uint8_t a_outer, a_inner;
+    TickType_t xLastWakeTime;
+    xLastWakeTime = xTaskGetTickCount();
+    for(;;)
+    {
+        osDelayUntil(&xLastWakeTime, CONTROL_CYCLE_TIME);
+        read_byte_from_table(TABLE_IDX_OUTER_GIMBAL_ANGLE, &a_outer);
+        read_byte_from_table(TABLE_IDX_INNER_GIMBAL_ANGLE, &a_inner);
+
+        // TODO(tyler): send angles to motors
+    }
+  /* USER CODE END StartControlTask */
 }
 
 /* StatusLEDTmrCallback function */

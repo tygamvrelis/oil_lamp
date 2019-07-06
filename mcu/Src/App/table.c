@@ -46,6 +46,13 @@ bool write_table(idx_t idx, uint8_t* src, size_t num)
 
 //-----------------------------------------------------------------------------
 
+bool write_byte_to_table(idx_t idx, uint8_t src)
+{
+    write_table(idx, &src, 1);
+}
+
+//-----------------------------------------------------------------------------
+
 bool read_table(idx_t idx, uint8_t* dest, size_t num)
 {
     if (num == 0 || dest == NULL || (idx + num > sizeof(table)))
@@ -58,6 +65,13 @@ bool read_table(idx_t idx, uint8_t* dest, size_t num)
 	xSemaphoreGive(TableLockHandle);
 
 	return true;
+}
+
+//-----------------------------------------------------------------------------
+
+bool read_byte_from_table(idx_t idx, uint8_t* dest)
+{
+    return read_table(idx, dest, 1);
 }
 
 /**
