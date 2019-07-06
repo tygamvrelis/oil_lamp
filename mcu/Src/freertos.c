@@ -280,7 +280,8 @@ void StartRxTask(void const * argument)
     {
         osDelayUntil(&xLastWakeTime, RX_CYCLE_TIME);
         circ_buff.iHead = circ_buff.size - huart2.hdmarx->Instance->NDTR;
-        while(circ_buff.iHead != circ_buff.iTail){
+        while(circ_buff.iHead != circ_buff.iTail)
+        {
             // Got data, do something with it
             uint8_t data = pop(&circ_buff);
             if ((char)data == 'L')
@@ -356,8 +357,8 @@ void StartImuTask(void const * argument)
 {
   /* USER CODE BEGIN StartImuTask */
     const uint32_t IMU_CYCLE_TIME = osKernelSysTickMicroSec(IMU_CYCLE_MS * 1000);
-    attachSemaphore(&imu_lamp, LampSemHandle);
-    attachSemaphore(&imu_base, BaseSemHandle);
+    mpu6050_attach_semaphore(&imu_lamp, LampSemHandle);
+    mpu6050_attach_semaphore(&imu_base, BaseSemHandle);
     TickType_t xLastWakeTime;
     xLastWakeTime = xTaskGetTickCount();
     osDelay(TX_PERIOD_MS - 2);
@@ -365,14 +366,14 @@ void StartImuTask(void const * argument)
     for(;;)
     {
         osDelayUntil(&xLastWakeTime, IMU_CYCLE_TIME);
-        accelReadIT(&imu_lamp);
-        gyroReadIT(&imu_lamp);
-        imu_data = get_data(&imu_lamp);
+        mpu6050_read_accel(&imu_lamp);
+        mpu6050_read_gyro(&imu_lamp);
+        imu_data = mpu6050_get_data(&imu_lamp);
         write_table(TABLE_IDX_LAMP_DATA, (uint8_t*)&imu_data, sizeof(imu_data_t));
 
-        accelReadIT(&imu_base);
-        gyroReadIT(&imu_base);
-        imu_data = get_data(&imu_base);
+        mpu6050_read_accel(&imu_base);
+        mpu6050_read_gyro(&imu_base);
+        imu_data = mpu6050_get_data(&imu_base);
         write_table(TABLE_IDX_BASE_DATA, (uint8_t*)&imu_data, sizeof(imu_data_t));
     }
   /* USER CODE END StartImuTask */
@@ -429,7 +430,7 @@ void HAL_WWDG_EarlyWakeupCallback(WWDG_HandleTypeDef *hwwdg)
         // The acceptable time difference above must be greater than the Watchdog
         // time; otherwise, it could mean that we are only here again because
         // the previous recovery attempt did not work.
-        HAL_WWDG_Refresh(&hwwdg);
+        HAL_WWDG_Refresh(hwwdg);
     }
     last_tick_entry = cur_tick;
 }
