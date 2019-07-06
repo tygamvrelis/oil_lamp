@@ -66,12 +66,9 @@ osStaticThreadDef_t RxTaskControlBlock;
 osThreadId TxHandle;
 uint32_t TxTaskBuffer[ 128 ];
 osStaticThreadDef_t TxTaskControlBlock;
-osThreadId ImuBaseHandle;
-uint32_t ImuBaseTaskBuffer[ 128 ];
-osStaticThreadDef_t ImuBaseTaskControlBlock;
-osThreadId ImuLampHandle;
-uint32_t ImuLampTaskBuffer[ 128 ];
-osStaticThreadDef_t ImuLampTaskControlBlock;
+osThreadId ImuHandle;
+uint32_t ImuTaskBuffer[ 128 ];
+osStaticThreadDef_t ImuTaskControlBlock;
 osTimerId StatusLEDTmrHandle;
 osStaticTimerDef_t StatusLEDTmrControlBlock;
 osTimerId CameraLEDTmrHandle;
@@ -143,8 +140,7 @@ uint8_t pop(CircBuff_t* buff)
 
 void StartRxTask(void const * argument);
 void StartTxTask(void const * argument);
-void StartImuBaseTask(void const * argument);
-void StartImuLampTask(void const * argument);
+void StartImuTask(void const * argument);
 void StatusLEDTmrCallback(void const * argument);
 void CameraLEDTmrCallback(void const * argument);
 
@@ -250,13 +246,9 @@ void MX_FREERTOS_Init(void) {
   osThreadStaticDef(Tx, StartTxTask, osPriorityHigh, 0, 128, TxTaskBuffer, &TxTaskControlBlock);
   TxHandle = osThreadCreate(osThread(Tx), NULL);
 
-  /* definition and creation of ImuBase */
-  osThreadStaticDef(ImuBase, StartImuBaseTask, osPriorityNormal, 0, 128, ImuBaseTaskBuffer, &ImuBaseTaskControlBlock);
-  ImuBaseHandle = osThreadCreate(osThread(ImuBase), NULL);
-
-  /* definition and creation of ImuLamp */
-  osThreadStaticDef(ImuLamp, StartImuLampTask, osPriorityNormal, 0, 128, ImuLampTaskBuffer, &ImuLampTaskControlBlock);
-  ImuLampHandle = osThreadCreate(osThread(ImuLamp), NULL);
+  /* definition and creation of Imu */
+  osThreadStaticDef(Imu, StartImuTask, osPriorityNormal, 0, 128, ImuTaskBuffer, &ImuTaskControlBlock);
+  ImuHandle = osThreadCreate(osThread(Imu), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
     /* add threads, ... */
@@ -353,58 +345,37 @@ void StartTxTask(void const * argument)
   /* USER CODE END StartTxTask */
 }
 
-/* USER CODE BEGIN Header_StartImuBaseTask */
+/* USER CODE BEGIN Header_StartImuTask */
 /**
- * @brief Function implementing the ImuBase thread.
- * @param argument: Not used
- * @retval None
- */
-/* USER CODE END Header_StartImuBaseTask */
-void StartImuBaseTask(void const * argument)
+* @brief Function implementing the Imu thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartImuTask */
+void StartImuTask(void const * argument)
 {
-  /* USER CODE BEGIN StartImuBaseTask */
+  /* USER CODE BEGIN StartImuTask */
     const uint32_t IMU_CYCLE_TIME = osKernelSysTickMicroSec(IMU_CYCLE_MS * 1000);
+    attachSemaphore(&imu_lamp, LampSemHandle);
     attachSemaphore(&imu_base, BaseSemHandle);
     TickType_t xLastWakeTime;
     xLastWakeTime = xTaskGetTickCount();
     osDelay(TX_PERIOD_MS - 2);
-    imu_data_t base_data;
-    for(;;)
-    {
-        osDelayUntil(&xLastWakeTime, IMU_CYCLE_TIME);
-        accelReadIT(&imu_base);
-        gyroReadIT(&imu_base);
-        base_data = get_data(&imu_base);
-        write_table(TABLE_IDX_BASE_DATA, (uint8_t*)&base_data, sizeof(imu_data_t));
-    }
-  /* USER CODE END StartImuBaseTask */
-}
-
-/* USER CODE BEGIN Header_StartImuLampTask */
-/**
- * @brief Function implementing the ImuLamp thread.
- * @param argument: Not used
- * @retval None
- */
-/* USER CODE END Header_StartImuLampTask */
-void StartImuLampTask(void const * argument)
-{
-  /* USER CODE BEGIN StartImuLampTask */
-    const uint32_t IMU_CYCLE_TIME = osKernelSysTickMicroSec(IMU_CYCLE_MS * 1000);
-    attachSemaphore(&imu_lamp, LampSemHandle);
-    TickType_t xLastWakeTime;
-    xLastWakeTime = xTaskGetTickCount();
-    osDelay(TX_PERIOD_MS - 2);
-    imu_data_t lamp_data;
+    imu_data_t imu_data;
     for(;;)
     {
         osDelayUntil(&xLastWakeTime, IMU_CYCLE_TIME);
         accelReadIT(&imu_lamp);
         gyroReadIT(&imu_lamp);
-        lamp_data = get_data(&imu_lamp);
-        write_table(TABLE_IDX_LAMP_DATA, (uint8_t*)&lamp_data, sizeof(imu_data_t));
+        imu_data = get_data(&imu_lamp);
+        write_table(TABLE_IDX_LAMP_DATA, (uint8_t*)&imu_data, sizeof(imu_data_t));
+
+        accelReadIT(&imu_base);
+        gyroReadIT(&imu_base);
+        imu_data = get_data(&imu_base);
+        write_table(TABLE_IDX_BASE_DATA, (uint8_t*)&imu_data, sizeof(imu_data_t));
     }
-  /* USER CODE END StartImuLampTask */
+  /* USER CODE END StartImuTask */
 }
 
 /* StatusLEDTmrCallback function */
@@ -427,9 +398,9 @@ void CameraLEDTmrCallback(void const * argument)
 /* USER CODE BEGIN Application */
 void HAL_WWDG_EarlyWakeupCallback(WWDG_HandleTypeDef *hwwdg)
 {
-//    // Watchdog wants to reset
-//    // Check if I2C is frozen, if so, try to software-reset it. Otherwise, let
-//    // the reset occur.
+    // Watchdog wants to reset
+    // Check if I2C is frozen, if so, try to software-reset it. Otherwise, let
+    // the reset occur.
     bool reset_lamp = false, reset_base = false;
     static uint32_t last_tick_entry = 0;
     uint32_t cur_tick = HAL_GetTick();
