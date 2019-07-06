@@ -48,7 +48,7 @@ bool write_table(idx_t idx, uint8_t* src, size_t num)
 
 bool write_byte_to_table(idx_t idx, uint8_t src)
 {
-    write_table(idx, &src, 1);
+    return write_table(idx, &src, 1);
 }
 
 //-----------------------------------------------------------------------------

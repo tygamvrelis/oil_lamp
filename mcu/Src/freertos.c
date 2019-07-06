@@ -29,10 +29,13 @@
 #include <stdbool.h>
 #include <string.h>
 #include "usart.h"
+#include "tim.h"
 #include "wwdg.h"
+#include "App/util.h"
 #include "App/table.h"
 #include "App/sensing.h"
 #include "App/rx.h"
+#include "App/servo.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -419,7 +422,14 @@ void StartControlTask(void const * argument)
 {
   /* USER CODE BEGIN StartControlTask */
     const uint32_t CONTROL_CYCLE_TIME = osKernelSysTickMicroSec(CONTROL_CYCLE_MS * 1000);
+    const int8_t MIN_GIMBAL_ANGLE = -40;
+    const int8_t MAX_GIMBAL_ANGLE = 40;
+
     uint8_t a_outer, a_inner;
+    Servo_t servo_outer, servo_inner;
+    servo_init(&servo_outer, SERVO_OUTER, &htim2, TIM_CHANNEL_1);
+    servo_init(&servo_inner, SERVO_INNER, &htim2, TIM_CHANNEL_2);
+
     TickType_t xLastWakeTime;
     xLastWakeTime = xTaskGetTickCount();
     for(;;)
@@ -428,7 +438,13 @@ void StartControlTask(void const * argument)
         read_byte_from_table(TABLE_IDX_OUTER_GIMBAL_ANGLE, &a_outer);
         read_byte_from_table(TABLE_IDX_INNER_GIMBAL_ANGLE, &a_inner);
 
-        // TODO(tyler): send angles to motors
+        // Make sure we don't move the servos to angles outside these bounds
+        a_outer = bound_int8_t(a_outer, MIN_GIMBAL_ANGLE, MAX_GIMBAL_ANGLE);
+        a_inner = bound_int8_t(a_inner, MIN_GIMBAL_ANGLE, MAX_GIMBAL_ANGLE);
+
+        // Update motor angles
+        servo_set_position(&servo_outer, a_outer);
+        servo_set_position(&servo_inner, a_inner);
     }
   /* USER CODE END StartControlTask */
 }
