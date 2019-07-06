@@ -32,6 +32,7 @@
 #include "wwdg.h"
 #include "App/table.h"
 #include "App/sensing.h"
+#include "App/rx.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -115,25 +116,6 @@ inline void blink_camera_led()
     // Turn on camera synchronization LED for 100 ms (about 3 frames...?)
     set_camera_led_state(CAMERA_LED_ON);
     osTimerStart(CameraLEDTmrHandle, 100);
-}
-
-// TODO(tyler): move this somewhere more suitable
-typedef struct{
-    const uint8_t size;
-    uint8_t iHead;
-    uint8_t iTail;
-    uint8_t* pBuff;
-}CircBuff_t;
-
-uint8_t pop(CircBuff_t* buff)
-{
-    uint8_t data = buff->pBuff[buff->iTail];
-    ++buff->iTail;
-    if (buff->iTail == buff->size)
-    {
-        buff->iTail = 0;
-    }
-    return data;
 }
 
 /* USER CODE END FunctionPrototypes */

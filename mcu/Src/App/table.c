@@ -44,6 +44,8 @@ bool write_table(idx_t idx, uint8_t* src, size_t num)
 	return true;
 }
 
+//-----------------------------------------------------------------------------
+
 bool read_table(idx_t idx, uint8_t* dest, size_t num)
 {
     if (num == 0 || dest == NULL || (idx + num > sizeof(table)))

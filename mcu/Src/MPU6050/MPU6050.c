@@ -131,6 +131,8 @@ bool mpu6050_init(MPU6050_t* imu, I2C_HandleTypeDef* hi2c)
     return true;
 }
 
+//-----------------------------------------------------------------------------
+
 void mpu6050_reset(MPU6050_t* imu)
 {
     uint8_t dataToWrite = 0x80;
@@ -138,10 +140,14 @@ void mpu6050_reset(MPU6050_t* imu)
             I2C_MEMADD_SIZE_8BIT, &dataToWrite, sizeof(dataToWrite), 100);
 }
 
+//-----------------------------------------------------------------------------
+
 void mpu6050_attach_semaphore(MPU6050_t* imu, osSemaphoreId sem)
 {
 	imu->sem = sem;
 }
+
+//-----------------------------------------------------------------------------
 
 bool mpu6050_read_accel(MPU6050_t* imu)
 {
@@ -181,6 +187,8 @@ bool mpu6050_read_accel(MPU6050_t* imu)
     return 1;
 }
 
+//-----------------------------------------------------------------------------
+
 bool mpu6050_read_gyro(MPU6050_t* imu)
 {
     uint8_t mpu_buff[6];
@@ -219,6 +227,8 @@ bool mpu6050_read_gyro(MPU6050_t* imu)
     return 1;
 }
 
+//-----------------------------------------------------------------------------
+
 imu_data_t mpu6050_get_data(MPU6050_t* imu)
 {
 	imu_data_t data;
@@ -230,6 +240,8 @@ imu_data_t mpu6050_get_data(MPU6050_t* imu)
 	data.vx = imu->vx;
 	return data;
 }
+
+//-----------------------------------------------------------------------------
 
 /**
  * @brief  Helper function for generateClocks
@@ -260,6 +272,8 @@ static uint8_t wait_for_gpio_state_timeout(
     }
     return ret;
 }
+
+//-----------------------------------------------------------------------------
 
 /**
  * @details
