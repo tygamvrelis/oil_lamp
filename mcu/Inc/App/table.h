@@ -33,7 +33,14 @@ typedef enum
 
 
 /********************************* Functions *********************************/
+/**
+ * @brief Write num bytes from src into the table at the specified index
+ */
 bool write_table(idx_t idx, uint8_t* src, size_t num);
+
+/**
+ * @brief Read num bytes from the table at the specified index into dest
+ */
 bool read_table(idx_t idx, uint8_t* dest, size_t num);
 
 /**

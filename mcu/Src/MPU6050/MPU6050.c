@@ -9,6 +9,7 @@
 
 /********************************** Includes *********************************/
 #include "MPU6050/MPU6050.h"
+#include <math.h>
 
 
 
@@ -74,163 +75,173 @@ static const float MPU6050_GYRO_FULL_SCALE = 250.0;
 
 
 /********************************* Functions *********************************/
-/**
- * @brief  Initializes the MPU6050 sensor by writing various settings to its
- *         registers, and reading a few of them for verification
- * @param  myMPU Pointer to the data structure which stores the data read from
- *         the MPU6050 sensor
- * @param  hi2c I2C instance the sensor is attached to
- * @return 1 if successful, otherwise a negative error code
- */
-int MPU6050Init(MPU6050_t* myMPU, I2C_HandleTypeDef* hi2c){
-	myMPU->hi2c = hi2c;
-    myMPU->az = NAN;
-    myMPU->ay = NAN;
-    myMPU->ax = NAN;
-    myMPU->vz = NAN;
-    myMPU->vy = NAN;
-    myMPU->vx = NAN;
+bool mpu6050_init(MPU6050_t* imu, I2C_HandleTypeDef* hi2c)
+{
+	imu->hi2c = hi2c;
+    imu->az = NAN;
+    imu->ay = NAN;
+    imu->ax = NAN;
+    imu->vz = NAN;
+    imu->vy = NAN;
+    imu->vx = NAN;
 
     uint8_t buff[1];
 
     // Use the best available clock source
     uint8_t dataToWrite = 0x01;
-    if(HAL_I2C_Mem_Write(myMPU->hi2c, MPU6050_ACCEL_AND_GYRO_ADDR, PWR_MGMT_1,
+    if(HAL_I2C_Mem_Write(imu->hi2c, MPU6050_ACCEL_AND_GYRO_ADDR, PWR_MGMT_1,
             I2C_MEMADD_SIZE_8BIT, &dataToWrite, sizeof(dataToWrite), 100)
-            != HAL_OK){
-        return -1;
+            != HAL_OK)
+    {
+        return false;
     }
 
     // Set I2C module to use 400 kHz speed (pg. 19 of register map)
     dataToWrite = 0x0D;
-    if(HAL_I2C_Mem_Write(myMPU->hi2c, MPU6050_ACCEL_AND_GYRO_ADDR, I2C_MST_CTRL,
+    if(HAL_I2C_Mem_Write(imu->hi2c, MPU6050_ACCEL_AND_GYRO_ADDR, I2C_MST_CTRL,
             I2C_MEMADD_SIZE_8BIT, &dataToWrite, sizeof(dataToWrite), 100)
-            != HAL_OK){
-        return -2;
+            != HAL_OK)
+    {
+        return false;
     }
 
-    // Check for bus communication essentially. If any function should fail and issue an early return, it would most likely
-    // be this one.
-    if(HAL_I2C_Mem_Read(myMPU->hi2c, MPU6050_ACCEL_AND_GYRO_ADDR, WHO_AM_I,
-    I2C_MEMADD_SIZE_8BIT, buff, 1, 100) != HAL_OK){
-        return -3;
+    // Check for bus communication essentially. If any function should fail
+    // and issue an early return, it would most likely be this one
+    if(HAL_I2C_Mem_Read(imu->hi2c, MPU6050_ACCEL_AND_GYRO_ADDR, WHO_AM_I,
+    I2C_MEMADD_SIZE_8BIT, buff, 1, 100) != HAL_OK)
+    {
+        return false;
     }
 
     // Check that the WHO_AM_I register is 0x68
-    if(buff[0] != MPU6050_ACCEL_AND_GYRO_ADDR >> 1){
-        return -4;
+    if(buff[0] != MPU6050_ACCEL_AND_GYRO_ADDR >> 1)
+    {
+        return false;
     }
 
     // Force accelerometer and gyroscope to ON
     dataToWrite = 0x00;
-    if(HAL_I2C_Mem_Write(myMPU->hi2c, MPU6050_ACCEL_AND_GYRO_ADDR, PWR_MGMT_2,
+    if(HAL_I2C_Mem_Write(imu->hi2c, MPU6050_ACCEL_AND_GYRO_ADDR, PWR_MGMT_2,
             I2C_MEMADD_SIZE_8BIT, &dataToWrite, sizeof(dataToWrite), 100)
-            != HAL_OK){
-        return -5;
+            != HAL_OK)
+    {
+        return false;
     }
 
-    /* Return success */
-    return 1;
+    return true;
 }
 
-/**
- * @brief  Reset the inertial measurement unit using blocking IO
- * @param  myMPU Pointer to the data structure which stores the data read from
- *         the MPU6050 sensor
- * @return None
- */
-void resetIMUBlocking(MPU6050_t* myMPU){
+//-----------------------------------------------------------------------------
+
+void mpu6050_reset(MPU6050_t* imu)
+{
     uint8_t dataToWrite = 0x80;
-    HAL_I2C_Mem_Write(myMPU->hi2c, MPU6050_ACCEL_AND_GYRO_ADDR, PWR_MGMT_1,
+    HAL_I2C_Mem_Write(imu->hi2c, MPU6050_ACCEL_AND_GYRO_ADDR, PWR_MGMT_1,
             I2C_MEMADD_SIZE_8BIT, &dataToWrite, sizeof(dataToWrite), 100);
 }
 
-void attachSemaphore(MPU6050_t* myMPU, osSemaphoreId sem)
+//-----------------------------------------------------------------------------
+
+void mpu6050_attach_semaphore(MPU6050_t* imu, osSemaphoreId sem)
 {
-	myMPU->sem = sem;
+	imu->sem = sem;
 }
 
-int accelReadIT(MPU6050_t* myMPU){
+//-----------------------------------------------------------------------------
+
+bool mpu6050_read_accel(MPU6050_t* imu)
+{
     uint8_t mpu_buff[6];
-    if(HAL_I2C_Mem_Read_DMA(myMPU->hi2c, MPU6050_ACCEL_AND_GYRO_ADDR,
+    if(HAL_I2C_Mem_Read_DMA(imu->hi2c, MPU6050_ACCEL_AND_GYRO_ADDR,
             MPU6050_ACCEL_X_ADDR_H,
-            I2C_MEMADD_SIZE_8BIT, mpu_buff, 6) != HAL_OK){
-        HAL_DMA_Abort_IT(myMPU->hi2c->hdmarx);
-        HAL_DMA_Abort_IT(myMPU->hi2c->hdmatx);
-    	generateClocks(myMPU->hi2c, 1, 1);
-        myMPU->ax = NAN;
-        myMPU->ay = NAN;
-        myMPU->az = NAN;
+            I2C_MEMADD_SIZE_8BIT, mpu_buff, 6) != HAL_OK)
+    {
+        HAL_DMA_Abort_IT(imu->hi2c->hdmarx);
+        HAL_DMA_Abort_IT(imu->hi2c->hdmatx);
+        mpu6050_generate_clocks(imu->hi2c, 1, 1);
+    	imu->ax = NAN;
+        imu->ay = NAN;
+        imu->az = NAN;
         return -1;
     }
-    if(xSemaphoreTake(myMPU->sem, MAX_SEM_WAIT) != pdTRUE){
-        HAL_DMA_Abort_IT(myMPU->hi2c->hdmarx);
-        HAL_DMA_Abort_IT(myMPU->hi2c->hdmatx);
-        myMPU->ax = NAN;
-        myMPU->ay = NAN;
-        myMPU->az = NAN;
+    if(xSemaphoreTake(imu->sem, MAX_SEM_WAIT) != pdTRUE)
+    {
+        HAL_DMA_Abort_IT(imu->hi2c->hdmarx);
+        HAL_DMA_Abort_IT(imu->hi2c->hdmatx);
+        imu->ax = NAN;
+        imu->ay = NAN;
+        imu->az = NAN;
         return -2;
     }
 
     // Process data; scale to physical units
     int16_t temp = (mpu_buff[0] << 8 | mpu_buff[1]);
-    myMPU->ax = -1.0 * (temp * MPU6050_ACCEL_FULL_SCALE / (32767.0));
+    imu->ax = -1.0 * (temp * MPU6050_ACCEL_FULL_SCALE / (32767.0));
 
     temp = (mpu_buff[2] << 8 | mpu_buff[3]);
-    myMPU->ay = -1.0 * (temp * MPU6050_ACCEL_FULL_SCALE / (32767.0));
+    imu->ay = -1.0 * (temp * MPU6050_ACCEL_FULL_SCALE / (32767.0));
 
     temp = (mpu_buff[4] << 8 | mpu_buff[5]);
-    myMPU->az = -1.0 * (temp * MPU6050_ACCEL_FULL_SCALE / (32767.0));
+    imu->az = -1.0 * (temp * MPU6050_ACCEL_FULL_SCALE / (32767.0));
 
     return 1;
 }
 
-int gyroReadIT(MPU6050_t* myMPU){
+//-----------------------------------------------------------------------------
+
+bool mpu6050_read_gyro(MPU6050_t* imu)
+{
     uint8_t mpu_buff[6];
-    if(HAL_I2C_Mem_Read_DMA(myMPU->hi2c, MPU6050_ACCEL_AND_GYRO_ADDR,
+    if(HAL_I2C_Mem_Read_DMA(imu->hi2c, MPU6050_ACCEL_AND_GYRO_ADDR,
             MPU6050_GYRO_X_ADDR_H,
-            I2C_MEMADD_SIZE_8BIT, mpu_buff, 6) != HAL_OK){
-        HAL_DMA_Abort_IT(myMPU->hi2c->hdmarx);
-        HAL_DMA_Abort_IT(myMPU->hi2c->hdmatx);
-    	generateClocks(myMPU->hi2c, 1, 1);
-        myMPU->vx = NAN;
-        myMPU->vy = NAN;
-        myMPU->vz = NAN;
+            I2C_MEMADD_SIZE_8BIT, mpu_buff, 6) != HAL_OK)
+    {
+        HAL_DMA_Abort_IT(imu->hi2c->hdmarx);
+        HAL_DMA_Abort_IT(imu->hi2c->hdmatx);
+        mpu6050_generate_clocks(imu->hi2c, 1, 1);
+        imu->vx = NAN;
+        imu->vy = NAN;
+        imu->vz = NAN;
         return -1;
     }
-    if(xSemaphoreTake(myMPU->sem, MAX_SEM_WAIT) != pdTRUE){
-        HAL_DMA_Abort_IT(myMPU->hi2c->hdmarx);
-        HAL_DMA_Abort_IT(myMPU->hi2c->hdmatx);
-        myMPU->vx = NAN;
-        myMPU->vy = NAN;
-        myMPU->vz = NAN;
+    if(xSemaphoreTake(imu->sem, MAX_SEM_WAIT) != pdTRUE)
+    {
+        HAL_DMA_Abort_IT(imu->hi2c->hdmarx);
+        HAL_DMA_Abort_IT(imu->hi2c->hdmatx);
+        imu->vx = NAN;
+        imu->vy = NAN;
+        imu->vz = NAN;
         return -2;
     }
 
     // Process data; scale to physical units
     int16_t temp = (mpu_buff[0] << 8 | mpu_buff[1]);
-    myMPU->vx = (temp / (32767.0) * MPU6050_GYRO_FULL_SCALE);
+    imu->vx = (temp / (32767.0) * MPU6050_GYRO_FULL_SCALE);
 
     temp = (mpu_buff[2] << 8 | mpu_buff[3]);
-    myMPU->vy = (temp / (32767.0) * MPU6050_GYRO_FULL_SCALE);
+    imu->vy = (temp / (32767.0) * MPU6050_GYRO_FULL_SCALE);
 
     temp = (mpu_buff[4] << 8 | mpu_buff[5]);
-    myMPU->vz = (temp / (32767.0) * MPU6050_GYRO_FULL_SCALE);
+    imu->vz = (temp / (32767.0) * MPU6050_GYRO_FULL_SCALE);
 
     return 1;
 }
 
-imu_data_t get_data(MPU6050_t* myMPU)
+//-----------------------------------------------------------------------------
+
+imu_data_t mpu6050_get_data(MPU6050_t* imu)
 {
 	imu_data_t data;
-	data.az = myMPU->az;
-	data.ay = myMPU->ay;
-	data.ax = myMPU->ax;
-	data.vz = myMPU->vz;
-	data.vy = myMPU->vy;
-	data.vx = myMPU->vx;
+	data.az = imu->az;
+	data.ay = imu->ay;
+	data.ax = imu->ax;
+	data.vz = imu->vz;
+	data.vy = imu->vy;
+	data.vx = imu->vx;
 	return data;
 }
+
+//-----------------------------------------------------------------------------
 
 /**
  * @brief  Helper function for generateClocks
@@ -241,10 +252,10 @@ imu_data_t get_data(MPU6050_t* myMPU)
  * @return 1 if SDA pin is read to be state, 0 if timeout
  */
 static uint8_t wait_for_gpio_state_timeout(
-        GPIO_TypeDef* port,
-        uint16_t pin,
-        GPIO_PinState state,
-        uint8_t timeout
+    GPIO_TypeDef* port,
+    uint16_t pin,
+    GPIO_PinState state,
+    uint8_t timeout
 )
 {
     uint32_t Tickstart = HAL_GetTick();
@@ -262,9 +273,9 @@ static uint8_t wait_for_gpio_state_timeout(
     return ret;
 }
 
+//-----------------------------------------------------------------------------
+
 /**
- * @brief This function bit-bangs the I2C master clock, with the option of
- *        sending stop bits
  * @details
  * This function is used as a workaround for an issue where the BUSY flag of
  * the I2C module is erroneously asserted in the hardware (a silicon bug,
@@ -282,7 +293,7 @@ static uint8_t wait_for_gpio_state_timeout(
  * @param numClocks The number of times to cycle the I2C master clock
  * @param sendStopBits 1 if stop bits are to be sent on SDA
  */
-void generateClocks(
+void mpu6050_generate_clocks(
     I2C_HandleTypeDef* hi2c,
     uint8_t numClocks,
     uint8_t sendStopBits
@@ -338,7 +349,8 @@ void generateClocks(
     GPIO_InitStructure.Pin = i2c->sdaPin;
     HAL_GPIO_Init(i2c->sdaPort, &GPIO_InitStructure);
 
-    for(uint8_t i = 0; i < numClocks; i++){
+    for(uint8_t i = 0; i < numClocks; i++)
+    {
         // 3. Check SCL and SDA High level in GPIOx_IDR.
         if(sendStopBits){
             HAL_GPIO_WritePin(i2c->sdaPort, i2c->sdaPin, GPIO_PIN_SET);
