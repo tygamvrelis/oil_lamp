@@ -16,6 +16,7 @@
 /********************************** Includes *********************************/
 #include <stdbool.h>
 #include <stddef.h>
+#include "MPU6050/MPU6050_t.h"
 
 
 
@@ -23,17 +24,17 @@
 /*********************************** Types ************************************/
 typedef enum
 {
-	TABLE_IDX_BASE_DATA,
-	TABLE_IDX_LAMP_DATA,
-	MAX_TABLE_IDX
+	TABLE_IDX_BASE_DATA = 0,
+	TABLE_IDX_LAMP_DATA = sizeof(imu_data_t),
+	MAX_TABLE_IDX = 2 * sizeof(imu_data_t)
 }idx_t;
 
 
 
 
 /********************************* Functions *********************************/
-bool write_table(idx_t idx, float* src, size_t num);
-bool read_table(idx_t idx, float* dest, size_t num);
+bool write_table(idx_t idx, uint8_t* src, size_t num);
+bool read_table(idx_t idx, uint8_t* dest, size_t num);
 
 /**
  * @}
