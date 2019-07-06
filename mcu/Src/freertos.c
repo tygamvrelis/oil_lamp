@@ -47,7 +47,7 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-#define BUF_SIZE     (2 + MAX_TABLE_IDX + 2)
+#define BUF_SIZE     (2 + TABLE_IDX_MAX_SENSOR_DATA + 2)
 #define BUF_HEADER_1 0
 #define BUF_HEADER_2 1
 #define BUF_IMU      2
@@ -257,6 +257,14 @@ void StartRxTask(void const * argument)
     static uint8_t rx_buff[32] = {0}; // static => no stack usage
     CircBuff_t circ_buff = {sizeof(rx_buff), 0, 0, rx_buff};
 
+    enum {
+        CMD_NONE,
+        CMD_BLINK,
+        CMD_ANGLE,
+        CMD_ANGLE_OUTER,
+        CMD_ANGLE_INNER
+    } parse_state = CMD_NONE;
+
     HAL_UART_Receive_DMA(&huart2, rx_buff, sizeof(rx_buff));
     for(;;)
     {
@@ -264,11 +272,43 @@ void StartRxTask(void const * argument)
         circ_buff.iHead = circ_buff.size - huart2.hdmarx->Instance->NDTR;
         while(circ_buff.iHead != circ_buff.iTail)
         {
-            // Got data, do something with it
             uint8_t data = pop(&circ_buff);
-            if ((char)data == 'L')
+            switch (parse_state)
             {
-                blink_camera_led();
+                case CMD_NONE:
+                    if ((char)data == 'L')
+                    {
+                        parse_state = CMD_BLINK;
+                    }
+                    else if ((char)data == 'A')
+                    {
+                        parse_state = CMD_ANGLE;
+                    }
+                    break;
+                default:
+                    break;
+            }
+
+            // Take action based on state
+            switch (parse_state)
+            {
+                case CMD_BLINK:
+                    blink_camera_led();
+                    parse_state = CMD_NONE;
+                    break;
+                case CMD_ANGLE:
+                    parse_state = CMD_ANGLE_OUTER;
+                    break;
+                case CMD_ANGLE_OUTER:
+                    write_table(TABLE_IDX_OUTER_GIMBAL_ANGLE, &data, 1);
+                    parse_state = CMD_ANGLE_INNER;
+                    break;
+                case CMD_ANGLE_INNER:
+                    write_table(TABLE_IDX_INNER_GIMBAL_ANGLE, &data, 1);
+                    parse_state = CMD_NONE;
+                    break;
+                default:
+                    break;
             }
         }
         if (huart2.RxState == HAL_UART_STATE_ERROR)

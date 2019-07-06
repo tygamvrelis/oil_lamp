@@ -24,7 +24,7 @@ extern osSemaphoreId TableLockHandle;
 
 
 /****************************** Private variables ****************************/
-static uint8_t table[2 * sizeof(imu_data_t)] = {0};
+static uint8_t table[MAX_TABLE_IDX] = {0};
 
 
 

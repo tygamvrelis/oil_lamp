@@ -24,9 +24,8 @@ def transmit(ser, a_outer, a_inner, dryrun=False):
         dryrun : bool
             Prints angles to shell if True, otherwise sends to MCU
     '''
-    # TODO (tyler): figure out how we want to do this. Should be able to get
-    # away with sending 2 bytes (I doubt we need better accuracy than int), but
-    # we'll see
+    # Should be able to get away with sending 2 bytes -- I doubt we need better
+    # accuracy than int
     a_outer = int(np.round(a_outer))
     a_inner = int(np.round(a_inner))
     
@@ -34,7 +33,7 @@ def transmit(ser, a_outer, a_inner, dryrun=False):
         logString("Outer: {0}|Inner: {1}".format(a_outer, a_inner))
     else:
         cmd_id = 'A'.encode() # A => Angle payload
-        payload = struct.pack('<B', a_outer) + struct.pack('<B', a_inner)
+        payload = struct.pack('<b', a_outer) + struct.pack('<b', a_inner)
         packet = cmd_id + payload
         ser.write(packet)
     return
