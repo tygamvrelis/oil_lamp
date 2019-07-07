@@ -80,7 +80,7 @@ def send_servo_angles(port, baud, angles):
     
     try:
         with serial.Serial(port, baud, timeout=0) as ser:
-            enable_servos(port)
+            enable_servos(ser)
             transmit_angles(ser, a_outer, a_inner)
         logString("Sent outer angle={0} and inner angle={1}".format(
             np.round(a_outer,2),  np.round(a_inner,2))
@@ -213,11 +213,10 @@ def send_sine_wave(port, baud, params, servo):
                     transmit_angles(ser, val, val)
                 time.sleep(0.01)
     except serial.serialutil.SerialException as e:
-        if(num_tries % 100 == 0):
-            if(str(e).find("FileNotFoundError")):
-                logString("Port not found")
-            else:
-                logString("Serial exception")
+        if(str(e).find("FileNotFoundError")):
+            logString("Port not found")
+        else:
+            logString("Serial exception")
 
 def playback(port, baud, fname, loop, use_legacy_sign_convention, verbose):
     '''
