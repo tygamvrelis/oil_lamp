@@ -163,7 +163,19 @@ def parse_args():
              ' specified, the other will default to 0',
         default='both'
     )
-
+    
+    parser.add_argument(
+        '--use_servos',
+        help='Enables servo actuation on MCU if True, disables it if False',
+        type=str2bool
+    )
+    
+    parser.add_argument(
+        '--use_imus',
+        help='Enables IMU sensing on MCU if True, disables it if False',
+        type=str2bool
+    )
+    
     parser.add_argument(
         '--verbose',
         help='Display extra info/debug messages if True',
@@ -172,6 +184,40 @@ def parse_args():
     )
 
     return vars(parser.parse_args())
+
+CMD_BLINK = 'L'
+CMD_CTRL_DI = '0'
+CMD_CTRL_EN = '1'
+CMD_SENS_DI = '2'
+CMD_SENS_EN = '3'
+CMD_ANGLE = 'A'
+def enable_servos():
+    '''
+    Sends the MCU a command to enable servo actuation
+    '''
+    logString("Enabling servos")
+    ser.write(CMD_CTRL_EN.encode())
+
+def disable_servos():
+    '''
+    Sends the MCU a command to disable servo actuation
+    '''
+    logString("Disabling servos")
+    ser.write(CMD_CTRL_DI.encode())
+
+def enable_imus():
+    '''
+    Sends the MCU a command to enable IMU sensing
+    '''
+    logString("Enabling IMUs")
+    ser.write(CMD_SENS_EN.encode())
+
+def disable_imus():
+    '''
+    Sends the MCU a command to disable IMU sensing
+    '''
+    logString("Disabling IMUs")
+    ser.write(CMD_SENS_DI.encode())
 
 IMU_BUF_SIZE = 2*6*4 # 2 IMUs * 6 floats
 BUF_SIZE = IMU_BUF_SIZE + 1 # 1 status byte

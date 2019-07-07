@@ -10,7 +10,7 @@ import numpy as np
 from util import *
 from analyze import get_angles, OUTER, INNER, BASE_OUTER, BASE_INNER, LAMP_OUTER, LAMP_INNER
 
-def transmit(ser, a_outer, a_inner, dryrun=False):
+def transmit_angles(ser, a_outer, a_inner, dryrun=False):
     '''
     Sends angle data to the MCU
     --------
@@ -32,7 +32,7 @@ def transmit(ser, a_outer, a_inner, dryrun=False):
     if dryrun:
         logString("Outer: {0}|Inner: {1}".format(a_outer, a_inner))
     else:
-        cmd_id = 'A'.encode() # A => Angle payload
+        cmd_id = CMD_ANGLE.encode() # A => Angle payload
         payload = struct.pack('<b', a_outer) + struct.pack('<b', a_inner)
         packet = cmd_id + payload
         ser.write(packet)
@@ -80,7 +80,8 @@ def send_servo_angles(port, baud, angles):
     
     try:
         with serial.Serial(port, baud, timeout=0) as ser:
-            transmit(ser, a_outer, a_inner)
+            enable_servos()
+            transmit_angles(ser, a_outer, a_inner)
         logString("Sent outer angle={0} and inner angle={1}".format(
             np.round(a_outer,2),  np.round(a_inner,2))
         )
@@ -139,15 +140,16 @@ def send_sine_wave(port, baud, params, servo):
     t_s = time.time()
     try:
         with serial.Serial(port, baud, timeout=0) as ser:
+            enable_servos()
             while True:
                 t = time.time() - t_s
                 val = amp * np.sin(2 * np.pi * freq * t)
                 if servo == 'outer':
-                    transmit(ser, val, 0)
+                    transmit_angles(ser, val, 0)
                 elif servo == 'inner':
-                    transmit(ser, a, val)
+                    transmit_angles(ser, a, val)
                 else:
-                    transmit(ser, val, val)
+                    transmit_angles(ser, val, val)
                 time.sleep(0.01)
     except serial.serialutil.SerialException as e:
         if(num_tries % 100 == 0):
@@ -195,6 +197,7 @@ def playback(port, baud, fname, loop, use_legacy_sign_convention, verbose):
         try:
             with serial.Serial(port, baud, timeout=0) as ser:
                 logString("Connected")
+                enable_servos()
                 if loop:
                     logString("Looping is enabled...will send angles forever")
                 else:
@@ -204,7 +207,7 @@ def playback(port, baud, fname, loop, use_legacy_sign_convention, verbose):
                         outer_angle = angle_vec[BASE_OUTER] + angle_vec[LAMP_OUTER]
                         inner_angle = angle_vec[BASE_INNER] + angle_vec[LAMP_INNER]
                         # Send angles and wait a few ms before sending again
-                        transmit(ser, outer_angle, inner_angle)
+                        transmit_angles(ser, outer_angle, inner_angle)
                         tx_cycle.wait()
                     if not loop:
                         return

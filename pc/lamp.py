@@ -7,7 +7,7 @@ import sys
 import numpy as np
 from util import *
 from rx import record
-from tx import playback, send_servo_angles, send_sine_wave
+from tx import *
 from analyze import analyze
 
 def main():
@@ -20,6 +20,8 @@ def main():
     baseline_fname = args['set_baseline']
     angles = args['set_angles']
     sine_params = args['sine']
+    use_servos = args['use_servos']
+    use_imus = args['use_imus']
     verbose = args['verbose']
     
     if (playback_fname and analyze_fname) or \
@@ -41,6 +43,16 @@ def main():
     elif sine_params:
         logString("Sending sine wave")
         send_sine_wave(port, baud, sine_params, args['servo'])
+    elif use_servos != None:
+        if use_servos:
+            enable_servos()
+        else:
+            disable_servos()
+    elif use_imus != None:
+        if use_servos:
+            enable_imus()
+        else:
+            disable_imus()
     elif baseline_fname:
         logString("Creating baseline")
         set_baseline(baseline_fname, args['use_legacy_sign_convention'], verbose)

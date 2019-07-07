@@ -123,6 +123,18 @@ inline void blink_camera_led()
     set_camera_led_state(CAMERA_LED_ON);
     osTimerStart(CameraLEDTmrHandle, 100);
 }
+
+/** @brief Enables the control (servos) thread */
+void enable_control(){ vTaskResume((TaskHandle_t)ControlHandle); }
+
+/** @brief Disables the control (servos) thread */
+void disable_control(){ vTaskSuspend((TaskHandle_t)ControlHandle); }
+
+/** @brief Enables the sensing (IMUs) thread */
+void enable_sensing(){ vTaskResume((TaskHandle_t)ImuHandle); }
+
+/** @brief Disables the sensing (IMUs) thread */
+void disable_sensing(){ vTaskSuspend((TaskHandle_t)ImuHandle); }
 /* USER CODE END FunctionPrototypes */
 
 void StartRxTask(void const * argument);
@@ -268,13 +280,18 @@ void StartRxTask(void const * argument)
 
     enum {
         CMD_NONE,
-        CMD_BLINK,
-        CMD_ANGLE,
+        CMD_BLINK = 'L',
+        CMD_CTRL_DI = '0',
+        CMD_CTRL_EN = '1',
+        CMD_SENS_DI = '2',
+        CMD_SENS_EN = '3',
+        CMD_ANGLE = 'A',
         CMD_ANGLE_OUTER,
         CMD_ANGLE_INNER
     } parse_state = CMD_NONE;
 
     MX_WWDG_Init();
+    disable_control();
     HAL_UART_Receive_DMA(&huart2, rx_buff, sizeof(rx_buff));
     for(;;)
     {
@@ -286,13 +303,29 @@ void StartRxTask(void const * argument)
             switch (parse_state)
             {
                 case CMD_NONE:
-                    if ((char)data == 'L')
+                    if ((char)data == (char)CMD_BLINK)
                     {
                         parse_state = CMD_BLINK;
                     }
-                    else if ((char)data == 'A')
+                    else if ((char)data == (char)CMD_ANGLE)
                     {
                         parse_state = CMD_ANGLE;
+                    }
+                    else if ((char)data == (char)CMD_CTRL_DI)
+                    {
+                        disable_control();
+                    }
+                    else if ((char)data == (char)CMD_CTRL_EN)
+                    {
+                        enable_control();
+                    }
+                    else if ((char)data == (char)CMD_SENS_DI)
+                    {
+                        enable_sensing();
+                    }
+                    else if ((char)data == (char)CMD_SENS_EN)
+                    {
+                        disable_sensing();
                     }
                     break;
                 default:
