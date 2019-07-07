@@ -127,7 +127,7 @@ def parse_args():
     parser.add_argument(
         '--playback',
         help='Streams the specified angle data to the microcontroller for'
-             ' playback. NOT SUPPORTED YET.',
+             ' playback',
         default=''
     )
     
