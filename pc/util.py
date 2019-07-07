@@ -4,6 +4,7 @@
 
 from datetime import datetime
 import serial.tools.list_ports
+import serial
 import argparse
 import os
 import sys
@@ -137,7 +138,45 @@ def parse_args():
         type=str2bool,
         default=True
     )
-
+    
+    parser.add_argument(
+        '--set_angles',
+        help='Sets the servos to the specified angles. The first argument is the'
+             ' outer gimbal angle and the second argument is the inner gimbal'
+             ' angle. If only one of the angles is specified, the other will'
+             ' default to 0. Example: --set_angles=-10,5',
+        default=''
+    )
+    
+    parser.add_argument(
+        '--sine',
+        help='Sends a sine wave of a given frequency and amplitude to the'
+             ' servos. For example --sine=1.0 sends a sine wave of 1 Hz, and'
+             ' --sine=1,22.5 sends a sine wave of 1 Hz with amplitude 22.5.'
+             ' Default frequency is 1.0 Hz and default amplitude is 40.0',
+        default=''
+    )
+    
+    parser.add_argument(
+        '--servo',
+        help='(sine option) Specifies which servo to send the angles to. Options'
+             ' are: outer, inner, both. Default: both. If only one servo is'
+             ' specified, the other will default to 0',
+        default='both'
+    )
+    
+    parser.add_argument(
+        '--use_servos',
+        help='Enables servo actuation on MCU if True, disables it if False',
+        type=str2bool
+    )
+    
+    parser.add_argument(
+        '--use_imus',
+        help='Enables IMU sensing on MCU if True, disables it if False',
+        type=str2bool
+    )
+    
     parser.add_argument(
         '--verbose',
         help='Display extra info/debug messages if True',
@@ -146,6 +185,56 @@ def parse_args():
     )
 
     return vars(parser.parse_args())
+
+CMD_BLINK = 'L'
+CMD_CTRL_DI = '0'
+CMD_CTRL_EN = '1'
+CMD_SENS_DI = '2'
+CMD_SENS_EN = '3'
+CMD_ANGLE = 'A'
+def enable_servos(ser):
+    '''
+    Sends the MCU a command to enable servo actuation
+    --------
+    Arguments:
+        ser : serial.Serial
+            COM port that MCU is connected to
+    '''
+    logString("Enabling servos")
+    ser.write(CMD_CTRL_EN.encode())
+
+def disable_servos(ser):
+    '''
+    Sends the MCU a command to disable servo actuation
+    --------
+    Arguments:
+        ser : serial.Serial
+            COM port that MCU is connected to
+    '''
+    logString("Disabling servos")
+    ser.write(CMD_CTRL_DI.encode())
+
+def enable_imus(ser):
+    '''
+    Sends the MCU a command to enable IMU sensing
+    --------
+    Arguments:
+        ser : serial.Serial
+            COM port that MCU is connected to
+    '''
+    logString("Enabling IMUs")
+    ser.write(CMD_SENS_EN.encode())
+
+def disable_imus(ser):
+    '''
+    Sends the MCU a command to disable IMU sensing
+    --------
+    Arguments:
+        ser : serial.Serial
+            COM port that MCU is connected to
+    '''
+    logString("Disabling IMUs")
+    ser.write(CMD_SENS_DI.encode())
 
 IMU_BUF_SIZE = 2*6*4 # 2 IMUs * 6 floats
 BUF_SIZE = IMU_BUF_SIZE + 1 # 1 status byte

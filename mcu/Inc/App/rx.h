@@ -20,7 +20,8 @@
 
 
 /*********************************** Types ************************************/
-typedef struct{
+typedef struct
+{
     const uint8_t size;
     uint8_t iHead;
     uint8_t iTail;
@@ -36,6 +37,6 @@ uint8_t pop(CircBuff_t* buff);
 /**
  * @}
  */
-/* end - Table */
+/* end - RX */
 
-#endif /* TABLE_H_ */
+#endif /* RX_H_ */

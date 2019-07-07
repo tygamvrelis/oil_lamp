@@ -29,10 +29,13 @@
 #include <stdbool.h>
 #include <string.h>
 #include "usart.h"
+#include "tim.h"
 #include "wwdg.h"
+#include "App/util.h"
 #include "App/table.h"
 #include "App/sensing.h"
 #include "App/rx.h"
+#include "App/servo.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -47,7 +50,7 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-#define BUF_SIZE     (2 + MAX_TABLE_IDX + 2)
+#define BUF_SIZE     (2 + TABLE_IDX_MAX_SENSOR_DATA + 2)
 #define BUF_HEADER_1 0
 #define BUF_HEADER_2 1
 #define BUF_IMU      2
@@ -70,6 +73,9 @@ osStaticThreadDef_t TxTaskControlBlock;
 osThreadId ImuHandle;
 uint32_t ImuTaskBuffer[ 128 ];
 osStaticThreadDef_t ImuTaskControlBlock;
+osThreadId ControlHandle;
+uint32_t ControlTaskBuffer[ 128 ];
+osStaticThreadDef_t ControlTaskControlBlock;
 osTimerId StatusLEDTmrHandle;
 osStaticTimerDef_t StatusLEDTmrControlBlock;
 osTimerId CameraLEDTmrHandle;
@@ -118,11 +124,45 @@ inline void blink_camera_led()
     osTimerStart(CameraLEDTmrHandle, 100);
 }
 
+#define NOTIFY_CLEAR 0
+#define NOTIFY_THREAD_DI 1
+/** @brief Enables the control (servos) thread */
+void enable_control()
+{
+    xTaskNotify((TaskHandle_t)ControlHandle, NOTIFY_CLEAR, eSetValueWithOverwrite);
+}
+
+/** @brief Disables the control (servos) thread */
+void disable_control()
+{
+    xTaskNotify((TaskHandle_t)ControlHandle, NOTIFY_THREAD_DI, eSetBits);
+}
+
+/** @brief Enables the sensing (IMUs) thread */
+void enable_sensing()
+{
+    xTaskNotify((TaskHandle_t)ImuHandle, NOTIFY_CLEAR, eSetValueWithOverwrite);
+}
+
+/** @brief Disables the sensing (IMUs) thread */
+void disable_sensing()
+{
+    xTaskNotify((TaskHandle_t)ImuHandle, NOTIFY_THREAD_DI, eSetBits);
+}
+
+/** @brief Returns true if the current thread is enabled, otherwise false */
+bool thread_is_enabled(){
+    uint32_t ulNotifiedValue;
+    // Don't clear bits and don't block
+    xTaskNotifyWait(0, 0, &ulNotifiedValue, 0);
+    return (ulNotifiedValue & NOTIFY_THREAD_DI) != NOTIFY_THREAD_DI;
+}
 /* USER CODE END FunctionPrototypes */
 
 void StartRxTask(void const * argument);
 void StartTxTask(void const * argument);
 void StartImuTask(void const * argument);
+void StartControlTask(void const * argument);
 void StatusLEDTmrCallback(void const * argument);
 void CameraLEDTmrCallback(void const * argument);
 
@@ -232,6 +272,10 @@ void MX_FREERTOS_Init(void) {
   osThreadStaticDef(Imu, StartImuTask, osPriorityNormal, 0, 128, ImuTaskBuffer, &ImuTaskControlBlock);
   ImuHandle = osThreadCreate(osThread(Imu), NULL);
 
+  /* definition and creation of Control */
+  osThreadStaticDef(Control, StartControlTask, osPriorityNormal, 0, 128, ControlTaskBuffer, &ControlTaskControlBlock);
+  ControlHandle = osThreadCreate(osThread(Control), NULL);
+
   /* USER CODE BEGIN RTOS_THREADS */
     /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -250,13 +294,26 @@ void StartRxTask(void const * argument)
 
   /* USER CODE BEGIN StartRxTask */
     scheduler_has_started = true;
-    MX_WWDG_Init();
     const uint32_t RX_CYCLE_TIME = osKernelSysTickMicroSec(1000);
     TickType_t xLastWakeTime = xTaskGetTickCount();
 
     static uint8_t rx_buff[32] = {0}; // static => no stack usage
     CircBuff_t circ_buff = {sizeof(rx_buff), 0, 0, rx_buff};
 
+    enum {
+        CMD_NONE,
+        CMD_BLINK = 'L',
+        CMD_CTRL_DI = '0',
+        CMD_CTRL_EN = '1',
+        CMD_SENS_DI = '2',
+        CMD_SENS_EN = '3',
+        CMD_ANGLE = 'A',
+        CMD_ANGLE_OUTER,
+        CMD_ANGLE_INNER
+    } parse_state = CMD_NONE;
+
+    MX_WWDG_Init();
+    disable_control();
     HAL_UART_Receive_DMA(&huart2, rx_buff, sizeof(rx_buff));
     for(;;)
     {
@@ -264,11 +321,59 @@ void StartRxTask(void const * argument)
         circ_buff.iHead = circ_buff.size - huart2.hdmarx->Instance->NDTR;
         while(circ_buff.iHead != circ_buff.iTail)
         {
-            // Got data, do something with it
             uint8_t data = pop(&circ_buff);
-            if ((char)data == 'L')
+            switch (parse_state)
             {
-                blink_camera_led();
+                case CMD_NONE:
+                    if ((char)data == (char)CMD_BLINK)
+                    {
+                        parse_state = CMD_BLINK;
+                    }
+                    else if ((char)data == (char)CMD_ANGLE)
+                    {
+                        parse_state = CMD_ANGLE;
+                    }
+                    else if ((char)data == (char)CMD_CTRL_DI)
+                    {
+                        disable_control();
+                    }
+                    else if ((char)data == (char)CMD_CTRL_EN)
+                    {
+                        enable_control();
+                    }
+                    else if ((char)data == (char)CMD_SENS_DI)
+                    {
+                        disable_sensing();
+                    }
+                    else if ((char)data == (char)CMD_SENS_EN)
+                    {
+                        enable_sensing();
+                    }
+                    break;
+                default:
+                    break;
+            }
+
+            // Take action based on state
+            switch (parse_state)
+            {
+                case CMD_BLINK:
+                    blink_camera_led();
+                    parse_state = CMD_NONE;
+                    break;
+                case CMD_ANGLE:
+                    parse_state = CMD_ANGLE_OUTER;
+                    break;
+                case CMD_ANGLE_OUTER:
+                    write_byte_to_table(TABLE_IDX_OUTER_GIMBAL_ANGLE, data);
+                    parse_state = CMD_ANGLE_INNER;
+                    break;
+                case CMD_ANGLE_INNER:
+                    write_byte_to_table(TABLE_IDX_INNER_GIMBAL_ANGLE, data);
+                    parse_state = CMD_NONE;
+                    break;
+                default:
+                    break;
             }
         }
         if (huart2.RxState == HAL_UART_STATE_ERROR)
@@ -338,6 +443,11 @@ void StartTxTask(void const * argument)
 void StartImuTask(void const * argument)
 {
   /* USER CODE BEGIN StartImuTask */
+    while (!thread_is_enabled())
+    {
+        continue;
+    }
+
     const uint32_t IMU_CYCLE_TIME = osKernelSysTickMicroSec(IMU_CYCLE_MS * 1000);
     mpu6050_attach_semaphore(&imu_lamp, LampSemHandle);
     mpu6050_attach_semaphore(&imu_base, BaseSemHandle);
@@ -348,6 +458,11 @@ void StartImuTask(void const * argument)
     for(;;)
     {
         osDelayUntil(&xLastWakeTime, IMU_CYCLE_TIME);
+        if (!thread_is_enabled())
+        {
+            continue;
+        }
+
         mpu6050_read_accel(&imu_lamp);
         mpu6050_read_gyro(&imu_lamp);
         imu_data = mpu6050_get_data(&imu_lamp);
@@ -359,6 +474,55 @@ void StartImuTask(void const * argument)
         write_table(TABLE_IDX_BASE_DATA, (uint8_t*)&imu_data, sizeof(imu_data_t));
     }
   /* USER CODE END StartImuTask */
+}
+
+/* USER CODE BEGIN Header_StartControlTask */
+/**
+* @brief Function implementing the Control thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartControlTask */
+#include <math.h>
+void StartControlTask(void const * argument)
+{
+  /* USER CODE BEGIN StartControlTask */
+    while (!thread_is_enabled())
+    {
+        continue;
+    }
+
+    const uint32_t CONTROL_CYCLE_TIME = osKernelSysTickMicroSec(CONTROL_CYCLE_MS * 1000);
+    const int8_t MIN_GIMBAL_ANGLE = -40;
+    const int8_t MAX_GIMBAL_ANGLE = 40;
+
+    int8_t a_outer, a_inner;
+    Servo_t servo_outer, servo_inner;
+    servo_init(&servo_outer, SERVO_OUTER, &htim2, TIM_CHANNEL_1);
+    servo_init(&servo_inner, SERVO_INNER, &htim2, TIM_CHANNEL_2);
+
+    TickType_t xLastWakeTime;
+    xLastWakeTime = xTaskGetTickCount();
+    for(;;)
+    {
+        osDelayUntil(&xLastWakeTime, CONTROL_CYCLE_TIME);
+        if (!thread_is_enabled())
+        {
+            continue;
+        }
+
+        read_byte_from_table(TABLE_IDX_OUTER_GIMBAL_ANGLE, (uint8_t*)&a_outer);
+        read_byte_from_table(TABLE_IDX_INNER_GIMBAL_ANGLE, (uint8_t*)&a_inner);
+
+        // Make sure we don't move the servos to angles outside these bounds
+        a_outer = bound_int8_t(a_outer, MIN_GIMBAL_ANGLE, MAX_GIMBAL_ANGLE);
+        a_inner = bound_int8_t(a_inner, MIN_GIMBAL_ANGLE, MAX_GIMBAL_ANGLE);
+
+        // Update motor angles
+        servo_set_position(&servo_outer, (float)a_outer);
+        servo_set_position(&servo_inner, (float)a_inner);
+    }
+  /* USER CODE END StartControlTask */
 }
 
 /* StatusLEDTmrCallback function */
