@@ -19,7 +19,7 @@ def main():
     playback_fname = args['playback']
     baseline_fname = args['set_baseline']
     angles = args['set_angles']
-    sine_freq = args['sine']
+    sine_params = args['sine']
     verbose = args['verbose']
     
     if (playback_fname and analyze_fname) or \
@@ -38,9 +38,9 @@ def main():
     elif angles:
         logString("Setting servo angles")
         send_servo_angles(port, baud, angles)
-    elif sine_freq:
-        logString("Sending sine wave of frequency {0}".format(float(sine_freq)))
-        send_sine_wave(port, baud, 22.5, float(sine_freq), args['servo'])
+    elif sine_params:
+        logString("Sending sine wave")
+        send_sine_wave(port, baud, sine_params, args['servo'])
     elif baseline_fname:
         logString("Creating baseline")
         set_baseline(baseline_fname, args['use_legacy_sign_convention'], verbose)

@@ -91,7 +91,7 @@ def send_servo_angles(port, baud, angles):
             else:
                 logString("Serial exception")
 
-def send_sine_wave(port, baud, amp, freq, servo):
+def send_sine_wave(port, baud, params, servo):
     '''
     Sends a sine wave to the microcontroller for servo actuation
     --------
@@ -100,13 +100,34 @@ def send_sine_wave(port, baud, amp, freq, servo):
             COM port that MCU is connected to
         baud : int
             Symbol rate over COM port
-        amp : float
-            Amplitude of the sine wave
-        freq : float
-            Frequency of the sine wave
+        params : string
+            String containing amplitude and frequency of sine wave
         servo : string
             Specifies which servo(s) to send the waveform to
     '''
+    f_default = 1.0
+    amp_default = 40.0
+    
+    has_sep=False
+    if "," in params:
+        has_sep=True
+
+    if has_sep:
+        freq, amp = params.split(",")
+        try:
+            amp = float(amp)
+        except ValueError:
+            amp = amp_default
+        try:
+            freq = float(freq)
+        except ValueError:
+            freq = f_default
+    else:
+        try:
+            freq = float(params)
+        except ValueError:
+            freq = f_default
+        amp = amp_default
 
     logString(list_ports())
     logString("Attempting connection to embedded")
