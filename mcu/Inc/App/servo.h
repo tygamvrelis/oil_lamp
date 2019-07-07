@@ -48,7 +48,7 @@ typedef struct
 
 /********************************* Functions *********************************/
 /**
- * @brief Initialize the servo instance
+ * @brief Initializes the servo instance and starts the signal timer
  * @param p_servo Pointer to servo instance
  * @param id Identifier to assign to servo
  * @param htim Timer instance to assign to servo

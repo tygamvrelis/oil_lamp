@@ -41,6 +41,7 @@ void servo_init(
     p_servo->id = id;
     p_servo->htim = htim;
     p_servo->channel = channel;
+    HAL_TIM_PWM_Start(htim, channel);
 }
 
 //-----------------------------------------------------------------------------
