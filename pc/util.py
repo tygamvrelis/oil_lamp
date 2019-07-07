@@ -144,7 +144,22 @@ def parse_args():
              ' outer gimbal angle and the second argument is the inner gimbal'
              ' angle. If only one of the angles is specified, the other will'
              ' default to 0. Example: --set_angles=-10,5',
-        default=True
+        default=''
+    )
+    
+    parser.add_argument(
+        '--sine',
+        help='Sends a sine wave of a given frequency to the servos. For example'
+             ' --sine=1.0 sends a sine wave of 1 Hz',
+        default=''
+    )
+    
+    parser.add_argument(
+        '--servo',
+        help='(sine option) Specifies which servo to send the angles to. Options'
+             ' are: outer, inner, both. Default: both. If only one servo is'
+             ' specified, the other will default to 0',
+        default='both'
     )
 
     parser.add_argument(

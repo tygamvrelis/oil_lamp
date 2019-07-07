@@ -418,6 +418,7 @@ void StartImuTask(void const * argument)
 * @retval None
 */
 /* USER CODE END Header_StartControlTask */
+#include <math.h>
 void StartControlTask(void const * argument)
 {
   /* USER CODE BEGIN StartControlTask */
@@ -425,7 +426,7 @@ void StartControlTask(void const * argument)
     const int8_t MIN_GIMBAL_ANGLE = -40;
     const int8_t MAX_GIMBAL_ANGLE = 40;
 
-    uint8_t a_outer, a_inner;
+    int8_t a_outer, a_inner;
     Servo_t servo_outer, servo_inner;
     servo_init(&servo_outer, SERVO_OUTER, &htim2, TIM_CHANNEL_1);
     servo_init(&servo_inner, SERVO_INNER, &htim2, TIM_CHANNEL_2);
@@ -435,16 +436,16 @@ void StartControlTask(void const * argument)
     for(;;)
     {
         osDelayUntil(&xLastWakeTime, CONTROL_CYCLE_TIME);
-        read_byte_from_table(TABLE_IDX_OUTER_GIMBAL_ANGLE, &a_outer);
-        read_byte_from_table(TABLE_IDX_INNER_GIMBAL_ANGLE, &a_inner);
+        read_byte_from_table(TABLE_IDX_OUTER_GIMBAL_ANGLE, (uint8_t*)&a_outer);
+        read_byte_from_table(TABLE_IDX_INNER_GIMBAL_ANGLE, (uint8_t*)&a_inner);
 
         // Make sure we don't move the servos to angles outside these bounds
         a_outer = bound_int8_t(a_outer, MIN_GIMBAL_ANGLE, MAX_GIMBAL_ANGLE);
         a_inner = bound_int8_t(a_inner, MIN_GIMBAL_ANGLE, MAX_GIMBAL_ANGLE);
 
         // Update motor angles
-        servo_set_position(&servo_outer, a_outer);
-        servo_set_position(&servo_inner, a_inner);
+        servo_set_position(&servo_outer, (float)a_outer);
+        servo_set_position(&servo_inner, (float)a_inner);
     }
   /* USER CODE END StartControlTask */
 }

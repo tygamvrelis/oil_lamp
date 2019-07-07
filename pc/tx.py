@@ -5,7 +5,7 @@
 import time
 import serial
 import os
-# import struct
+import struct
 import numpy as np
 from util import *
 from analyze import get_angles, OUTER, INNER, BASE_OUTER, BASE_INNER, LAMP_OUTER, LAMP_INNER
@@ -38,7 +38,7 @@ def transmit(ser, a_outer, a_inner, dryrun=False):
         ser.write(packet)
     return
 
-def set_servo_angles(port, baud, angles):
+def send_servo_angles(port, baud, angles):
     '''
     Sends a command to the microcontroller to set the servos to the specified
     angles.
@@ -84,6 +84,50 @@ def set_servo_angles(port, baud, angles):
         logString("Sent outer angle={0} and inner angle={1}".format(
             np.round(a_outer,2),  np.round(a_inner,2))
         )
+    except serial.serialutil.SerialException as e:
+        if(num_tries % 100 == 0):
+            if(str(e).find("FileNotFoundError")):
+                logString("Port not found")
+            else:
+                logString("Serial exception")
+
+def send_sine_wave(port, baud, amp, freq, servo):
+    '''
+    Sends a sine wave to the microcontroller for servo actuation
+    --------
+    Arguments:
+        port : serial.Serial
+            COM port that MCU is connected to
+        baud : int
+            Symbol rate over COM port
+        amp : float
+            Amplitude of the sine wave
+        freq : float
+            Frequency of the sine wave
+        servo : string
+            Specifies which servo(s) to send the waveform to
+    '''
+
+    logString(list_ports())
+    logString("Attempting connection to embedded")
+    logString("\tPort: " + port)
+    logString("\tBaud rate: " + str(baud))
+    
+    assert(servo == 'outer' or servo == 'inner' or servo == 'both'), "Invalid servo argument"
+    
+    t_s = time.time()
+    try:
+        with serial.Serial(port, baud, timeout=0) as ser:
+            while True:
+                t = time.time() - t_s
+                val = amp * np.sin(2 * np.pi * freq * t)
+                if servo == 'outer':
+                    transmit(ser, val, 0)
+                elif servo == 'inner':
+                    transmit(ser, a, val)
+                else:
+                    transmit(ser, val, val)
+                time.sleep(0.01)
     except serial.serialutil.SerialException as e:
         if(num_tries % 100 == 0):
             if(str(e).find("FileNotFoundError")):

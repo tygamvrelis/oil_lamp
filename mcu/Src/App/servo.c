@@ -17,8 +17,8 @@
 
 
 /****************************** Public variables ****************************/
-const int8_t POS_MAX = 45;  /**< Degrees */
-const int8_t POS_MIN = -45; /**< Degrees */
+const float POS_MAX = 45.0;  /**< Degrees */
+const float POS_MIN = -45.0; /**< Degrees */
 
 
 
@@ -46,9 +46,9 @@ void servo_init(
 
 //-----------------------------------------------------------------------------
 
-void servo_set_position(Servo_t* p_servo, int8_t angle)
+void servo_set_position(Servo_t* p_servo, float angle)
 {
-    float fpos = (float)bound_int8_t(angle, POS_MIN, POS_MAX) - POS_MIN;
+    float fpos = (float)bound_float(angle, POS_MIN, POS_MAX) - POS_MIN;
     float FPOS_MAX = POS_MAX;
     float FPOS_MIN = POS_MIN;
     float FPOS_MAX_DC = POS_MAX_DUTY_CYCLE;

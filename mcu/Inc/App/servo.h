@@ -21,8 +21,8 @@
 
 
 /****************************** Public variables ****************************/
-extern const int8_t POS_MAX;
-extern const int8_t POS_MIN;
+extern const float POS_MAX;
+extern const float POS_MIN;
 
 
 
@@ -66,7 +66,7 @@ void servo_init(
  * @param p_servo Pointer to servo instance
  * @param angle The angle to move the servo to
  */
-void servo_set_position(Servo_t* p_servo, int8_t angle);
+void servo_set_position(Servo_t* p_servo, float angle);
 
 /**
  * @}

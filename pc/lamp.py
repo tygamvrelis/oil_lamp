@@ -7,7 +7,7 @@ import sys
 import numpy as np
 from util import *
 from rx import record
-from tx import playback, set_servo_angles
+from tx import playback, send_servo_angles, send_sine_wave
 from analyze import analyze
 
 def main():
@@ -19,6 +19,7 @@ def main():
     playback_fname = args['playback']
     baseline_fname = args['set_baseline']
     angles = args['set_angles']
+    sine_freq = args['sine']
     verbose = args['verbose']
     
     if (playback_fname and analyze_fname) or \
@@ -36,7 +37,10 @@ def main():
         playback(port, baud, playback_fname, args['loop'], args['use_legacy_sign_convention'], verbose)
     elif angles:
         logString("Setting servo angles")
-        set_servo_angles(port, baud, angles)
+        send_servo_angles(port, baud, angles)
+    elif sine_freq:
+        logString("Sending sine wave of frequency {0}".format(float(sine_freq)))
+        send_sine_wave(port, baud, 22.5, float(sine_freq), args['servo'])
     elif baseline_fname:
         logString("Creating baseline")
         set_baseline(baseline_fname, args['use_legacy_sign_convention'], verbose)
