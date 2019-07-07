@@ -4,6 +4,7 @@
 
 from datetime import datetime
 import serial.tools.list_ports
+import serial
 import argparse
 import os
 import sys
@@ -191,30 +192,46 @@ CMD_CTRL_EN = '1'
 CMD_SENS_DI = '2'
 CMD_SENS_EN = '3'
 CMD_ANGLE = 'A'
-def enable_servos():
+def enable_servos(ser):
     '''
     Sends the MCU a command to enable servo actuation
+    --------
+    Arguments:
+        ser : serial.Serial
+            COM port that MCU is connected to
     '''
     logString("Enabling servos")
     ser.write(CMD_CTRL_EN.encode())
 
-def disable_servos():
+def disable_servos(ser):
     '''
     Sends the MCU a command to disable servo actuation
+    --------
+    Arguments:
+        ser : serial.Serial
+            COM port that MCU is connected to
     '''
     logString("Disabling servos")
     ser.write(CMD_CTRL_DI.encode())
 
-def enable_imus():
+def enable_imus(ser):
     '''
     Sends the MCU a command to enable IMU sensing
+    --------
+    Arguments:
+        ser : serial.Serial
+            COM port that MCU is connected to
     '''
     logString("Enabling IMUs")
     ser.write(CMD_SENS_EN.encode())
 
-def disable_imus():
+def disable_imus(ser):
     '''
     Sends the MCU a command to disable IMU sensing
+    --------
+    Arguments:
+        ser : serial.Serial
+            COM port that MCU is connected to
     '''
     logString("Disabling IMUs")
     ser.write(CMD_SENS_DI.encode())

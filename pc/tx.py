@@ -80,17 +80,78 @@ def send_servo_angles(port, baud, angles):
     
     try:
         with serial.Serial(port, baud, timeout=0) as ser:
-            enable_servos()
+            enable_servos(port)
             transmit_angles(ser, a_outer, a_inner)
         logString("Sent outer angle={0} and inner angle={1}".format(
             np.round(a_outer,2),  np.round(a_inner,2))
         )
     except serial.serialutil.SerialException as e:
-        if(num_tries % 100 == 0):
-            if(str(e).find("FileNotFoundError")):
-                logString("Port not found")
+        if(str(e).find("FileNotFoundError")):
+            logString("Port not found")
+        else:
+            logString("Serial exception")
+
+def change_servo_usage(port, baud, use_servos):
+    '''
+    Sends a command to the MCU to enable or disable servo usage
+    --------
+    Arguments:
+        port : serial.Serial
+            COM port that MCU is connected to
+        baud : int
+            Symbol rate over COM port
+        use_servos : bool
+            Indicates whether to enable or disable servo usage
+    '''
+    logString(list_ports())
+    logString("Attempting connection to embedded")
+    logString("\tPort: " + port)
+    logString("\tBaud rate: " + str(baud))
+    
+    try:
+        with serial.Serial(port, baud, timeout=0) as ser:
+            if use_servos:
+                enable_servos(ser)
+                logString("Sent command to enable servos")
             else:
-                logString("Serial exception")
+                disable_servos(ser)
+                logString("Sent command to disable servos")
+    except serial.serialutil.SerialException as e:
+        if(str(e).find("FileNotFoundError")):
+            logString("Port not found")
+        else:
+            logString("Serial exception")
+
+def change_imu_usage(port, baud, use_imus):
+    '''
+    Sends a command to the MCU to enable or disable IMU sensing
+    --------
+    Arguments:
+        port : serial.Serial
+            COM port that MCU is connected to
+        baud : int
+            Symbol rate over COM port
+        use_imus : bool
+            Indicates whether to enable or disable IMU usage
+    '''
+    logString(list_ports())
+    logString("Attempting connection to embedded")
+    logString("\tPort: " + port)
+    logString("\tBaud rate: " + str(baud))
+    
+    try:
+        with serial.Serial(port, baud, timeout=0) as ser:
+            if use_imus:
+                enable_imus(ser)
+                logString("Sent command to enable IMU sensing")
+            else:
+                disable_imus(ser)
+                logString("Sent command to disable IMU sensing")
+    except serial.serialutil.SerialException as e:
+        if(str(e).find("FileNotFoundError")):
+            logString("Port not found")
+        else:
+            logString("Serial exception")
 
 def send_sine_wave(port, baud, params, servo):
     '''
@@ -140,7 +201,7 @@ def send_sine_wave(port, baud, params, servo):
     t_s = time.time()
     try:
         with serial.Serial(port, baud, timeout=0) as ser:
-            enable_servos()
+            enable_servos(ser)
             while True:
                 t = time.time() - t_s
                 val = amp * np.sin(2 * np.pi * freq * t)
@@ -197,7 +258,7 @@ def playback(port, baud, fname, loop, use_legacy_sign_convention, verbose):
         try:
             with serial.Serial(port, baud, timeout=0) as ser:
                 logString("Connected")
-                enable_servos()
+                enable_servos(ser)
                 if loop:
                     logString("Looping is enabled...will send angles forever")
                 else:

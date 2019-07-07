@@ -44,15 +44,9 @@ def main():
         logString("Sending sine wave")
         send_sine_wave(port, baud, sine_params, args['servo'])
     elif use_servos != None:
-        if use_servos:
-            enable_servos()
-        else:
-            disable_servos()
+        change_servo_usage(port, baud, use_servos)
     elif use_imus != None:
-        if use_servos:
-            enable_imus()
-        else:
-            disable_imus()
+        change_imu_usage(port, baud, use_imus)
     elif baseline_fname:
         logString("Creating baseline")
         set_baseline(baseline_fname, args['use_legacy_sign_convention'], verbose)

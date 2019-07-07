@@ -148,7 +148,7 @@ def record(port, baud, verbose):
             try:
                 with serial.Serial(port, baud, timeout=0) as ser:
                     logString("Connected")
-                    enable_imus()
+                    enable_imus(ser)
                     if first:
                         first = False
                         ser.write(CMD_BLINK.encode()) # L => flash LED

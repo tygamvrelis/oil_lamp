@@ -124,17 +124,39 @@ inline void blink_camera_led()
     osTimerStart(CameraLEDTmrHandle, 100);
 }
 
+#define NOTIFY_CLEAR 0
+#define NOTIFY_THREAD_DI 1
 /** @brief Enables the control (servos) thread */
-void enable_control(){ vTaskResume((TaskHandle_t)ControlHandle); }
+void enable_control()
+{
+    xTaskNotify((TaskHandle_t)ControlHandle, NOTIFY_CLEAR, eSetValueWithOverwrite);
+}
 
 /** @brief Disables the control (servos) thread */
-void disable_control(){ vTaskSuspend((TaskHandle_t)ControlHandle); }
+void disable_control()
+{
+    xTaskNotify((TaskHandle_t)ControlHandle, NOTIFY_THREAD_DI, eSetBits);
+}
 
 /** @brief Enables the sensing (IMUs) thread */
-void enable_sensing(){ vTaskResume((TaskHandle_t)ImuHandle); }
+void enable_sensing()
+{
+    xTaskNotify((TaskHandle_t)ImuHandle, NOTIFY_CLEAR, eSetValueWithOverwrite);
+}
 
 /** @brief Disables the sensing (IMUs) thread */
-void disable_sensing(){ vTaskSuspend((TaskHandle_t)ImuHandle); }
+void disable_sensing()
+{
+    xTaskNotify((TaskHandle_t)ImuHandle, NOTIFY_THREAD_DI, eSetBits);
+}
+
+/** @brief Returns true if the current thread is enabled, otherwise false */
+bool thread_is_enabled(){
+    uint32_t ulNotifiedValue;
+    // Don't clear bits and don't block
+    xTaskNotifyWait(0, 0, &ulNotifiedValue, 0);
+    return (ulNotifiedValue & NOTIFY_THREAD_DI) != NOTIFY_THREAD_DI;
+}
 /* USER CODE END FunctionPrototypes */
 
 void StartRxTask(void const * argument);
@@ -321,11 +343,11 @@ void StartRxTask(void const * argument)
                     }
                     else if ((char)data == (char)CMD_SENS_DI)
                     {
-                        enable_sensing();
+                        disable_sensing();
                     }
                     else if ((char)data == (char)CMD_SENS_EN)
                     {
-                        disable_sensing();
+                        enable_sensing();
                     }
                     break;
                 default:
@@ -421,6 +443,11 @@ void StartTxTask(void const * argument)
 void StartImuTask(void const * argument)
 {
   /* USER CODE BEGIN StartImuTask */
+    while (!thread_is_enabled())
+    {
+        continue;
+    }
+
     const uint32_t IMU_CYCLE_TIME = osKernelSysTickMicroSec(IMU_CYCLE_MS * 1000);
     mpu6050_attach_semaphore(&imu_lamp, LampSemHandle);
     mpu6050_attach_semaphore(&imu_base, BaseSemHandle);
@@ -431,6 +458,11 @@ void StartImuTask(void const * argument)
     for(;;)
     {
         osDelayUntil(&xLastWakeTime, IMU_CYCLE_TIME);
+        if (!thread_is_enabled())
+        {
+            continue;
+        }
+
         mpu6050_read_accel(&imu_lamp);
         mpu6050_read_gyro(&imu_lamp);
         imu_data = mpu6050_get_data(&imu_lamp);
@@ -455,6 +487,11 @@ void StartImuTask(void const * argument)
 void StartControlTask(void const * argument)
 {
   /* USER CODE BEGIN StartControlTask */
+    while (!thread_is_enabled())
+    {
+        continue;
+    }
+
     const uint32_t CONTROL_CYCLE_TIME = osKernelSysTickMicroSec(CONTROL_CYCLE_MS * 1000);
     const int8_t MIN_GIMBAL_ANGLE = -40;
     const int8_t MAX_GIMBAL_ANGLE = 40;
@@ -469,6 +506,11 @@ void StartControlTask(void const * argument)
     for(;;)
     {
         osDelayUntil(&xLastWakeTime, CONTROL_CYCLE_TIME);
+        if (!thread_is_enabled())
+        {
+            continue;
+        }
+
         read_byte_from_table(TABLE_IDX_OUTER_GIMBAL_ANGLE, (uint8_t*)&a_outer);
         read_byte_from_table(TABLE_IDX_INNER_GIMBAL_ANGLE, (uint8_t*)&a_inner);
 
