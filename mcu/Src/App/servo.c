@@ -24,8 +24,8 @@ const int8_t POS_MIN = -45; /**< Degrees */
 
 
 /****************************** Private variables ****************************/
-static const uint16_t POS_MAX_DUTY_CYCLE = 2000 * 90; // 2 ms * 90 MHz
-static const uint16_t POS_MIN_DUTY_CYCLE = 1000 * 90; // 1 ms * 90 MHz
+static const uint32_t POS_MAX_DUTY_CYCLE = 2000 * 90; // 2 ms * 90 MHz
+static const uint32_t POS_MIN_DUTY_CYCLE = 1000 * 90; // 1 ms * 90 MHz
 
 
 

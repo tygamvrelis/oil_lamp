@@ -137,6 +137,15 @@ def parse_args():
         type=str2bool,
         default=True
     )
+    
+    parser.add_argument(
+        '--set_angles',
+        help='Sets the servos to the specified angles. The first argument is the'
+             ' outer gimbal angle and the second argument is the inner gimbal'
+             ' angle. If only one of the angles is specified, the other will'
+             ' default to 0. Example: --set_angles=-10,5',
+        default=True
+    )
 
     parser.add_argument(
         '--verbose',

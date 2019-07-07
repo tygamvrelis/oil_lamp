@@ -38,6 +38,59 @@ def transmit(ser, a_outer, a_inner, dryrun=False):
         ser.write(packet)
     return
 
+def set_servo_angles(port, baud, angles):
+    '''
+    Sends a command to the microcontroller to set the servos to the specified
+    angles.
+    --------
+    Arguments:
+        port : serial.Serial
+            COM port that MCU is connected to
+        baud : int
+            Symbol rate over COM port
+        angles : string
+            string of the form "outer_gimbal_angle,inner_gimbal_angle",
+            e.g. "-10,7". Arguments may be positive or negative.
+    '''
+    has_sep=False
+    if "," in angles:
+        has_sep=True
+
+    if has_sep:
+        a_outer, a_inner = angles.split(",")
+        try:
+            a_outer = float(a_outer)
+        except ValueError:
+            a_outer = 0
+        try:
+            a_inner = float(a_inner)
+        except ValueError:
+            a_inner = 0
+    else:
+        try:
+            a_outer = float(angles)
+        except ValueError:
+            a_outer = 0
+        a_inner = 0
+    
+    logString(list_ports())
+    logString("Attempting connection to embedded")
+    logString("\tPort: " + port)
+    logString("\tBaud rate: " + str(baud))
+    
+    try:
+        with serial.Serial(port, baud, timeout=0) as ser:
+            transmit(ser, a_outer, a_inner)
+        logString("Sent outer angle={0} and inner angle={1}".format(
+            np.round(a_outer,2),  np.round(a_inner,2))
+        )
+    except serial.serialutil.SerialException as e:
+        if(num_tries % 100 == 0):
+            if(str(e).find("FileNotFoundError")):
+                logString("Port not found")
+            else:
+                logString("Serial exception")
+
 def playback(port, baud, fname, loop, use_legacy_sign_convention, verbose):
     '''
     Initiates playback mode
