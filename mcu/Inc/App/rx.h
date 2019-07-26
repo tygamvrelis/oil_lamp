@@ -32,6 +32,9 @@ typedef struct
 
 
 /********************************* Functions *********************************/
+/**
+ * @brief Return the next element in the buffer and remove it from the buffer
+ */
 uint8_t pop(CircBuff_t* buff);
 
 /**

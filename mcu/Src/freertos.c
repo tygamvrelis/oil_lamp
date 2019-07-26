@@ -294,11 +294,13 @@ void StartRxTask(void const * argument)
 
   /* USER CODE BEGIN StartRxTask */
     scheduler_has_started = true;
-    const uint32_t RX_CYCLE_TIME = osKernelSysTickMicroSec(1000);
+    static const uint32_t RX_CYCLE_TIME = osKernelSysTickMicroSec(1000);
     TickType_t xLastWakeTime = xTaskGetTickCount();
 
     static uint8_t rx_buff[32] = {0}; // static => no stack usage
     CircBuff_t circ_buff = {sizeof(rx_buff), 0, 0, rx_buff};
+    float tmp_angle = 0.0;
+    uint8_t cnt = 0;
 
     enum {
         CMD_NONE,
@@ -332,6 +334,7 @@ void StartRxTask(void const * argument)
                     else if ((char)data == (char)CMD_ANGLE)
                     {
                         parse_state = CMD_ANGLE;
+                        cnt = 0;
                     }
                     else if ((char)data == (char)CMD_CTRL_DI)
                     {
@@ -365,12 +368,32 @@ void StartRxTask(void const * argument)
                     parse_state = CMD_ANGLE_OUTER;
                     break;
                 case CMD_ANGLE_OUTER:
-                    write_byte_to_table(TABLE_IDX_OUTER_GIMBAL_ANGLE, data);
-                    parse_state = CMD_ANGLE_INNER;
+                    ((uint8_t*)&tmp_angle)[cnt] = data;
+                    ++cnt;
+                    if (cnt == sizeof(float))
+                    {
+                        write_table(
+                            TABLE_IDX_OUTER_GIMBAL_ANGLE,
+                            (uint8_t*)&tmp_angle,
+                            sizeof(float)
+                        );
+                        parse_state = CMD_ANGLE_INNER;
+                        cnt = 0;
+                    }
                     break;
                 case CMD_ANGLE_INNER:
-                    write_byte_to_table(TABLE_IDX_INNER_GIMBAL_ANGLE, data);
-                    parse_state = CMD_NONE;
+                    ((uint8_t*)&tmp_angle)[cnt] = data;
+                    ++cnt;
+                    if (cnt == sizeof(float))
+                    {
+                        write_table(
+                            TABLE_IDX_OUTER_GIMBAL_ANGLE,
+                            (uint8_t*)&tmp_angle,
+                            sizeof(float)
+                        );
+                        parse_state = CMD_NONE;
+                        cnt = 0;
+                    }
                     break;
                 default:
                     break;
@@ -396,13 +419,15 @@ void StartTxTask(void const * argument)
 {
   /* USER CODE BEGIN StartTxTask */
     // For packet timing management
-    const uint32_t TX_CYCLE_TIME = osKernelSysTickMicroSec(TX_PERIOD_MS * 1000);
-    TickType_t xLastWakeTime = xTaskGetTickCount();
+    static const uint32_t TX_CYCLE_TIME = osKernelSysTickMicroSec(TX_PERIOD_MS * 1000);
+
     uint8_t status;
     uint8_t buf[BUF_SIZE] = {0};
     buf[BUF_HEADER_1] = 0xAA; // 0b10101010
     buf[BUF_HEADER_2] = 0xAA;
     buf[BUF_FOOTER] = '\n'; // Termination character
+
+    TickType_t xLastWakeTime = xTaskGetTickCount();
     for (;;)
     {
         osDelayUntil(&xLastWakeTime, TX_CYCLE_TIME);
@@ -448,13 +473,14 @@ void StartImuTask(void const * argument)
         continue;
     }
 
-    const uint32_t IMU_CYCLE_TIME = osKernelSysTickMicroSec(IMU_CYCLE_MS * 1000);
+    static const uint32_t IMU_CYCLE_TIME = osKernelSysTickMicroSec(IMU_CYCLE_MS * 1000);
+
+    imu_data_t imu_data;
     mpu6050_attach_semaphore(&imu_lamp, LampSemHandle);
     mpu6050_attach_semaphore(&imu_base, BaseSemHandle);
-    TickType_t xLastWakeTime;
-    xLastWakeTime = xTaskGetTickCount();
+
+    TickType_t xLastWakeTime = xTaskGetTickCount();
     osDelay(TX_PERIOD_MS - 2);
-    imu_data_t imu_data;
     for(;;)
     {
         osDelayUntil(&xLastWakeTime, IMU_CYCLE_TIME);
@@ -492,17 +518,16 @@ void StartControlTask(void const * argument)
         continue;
     }
 
-    const uint32_t CONTROL_CYCLE_TIME = osKernelSysTickMicroSec(CONTROL_CYCLE_MS * 1000);
-    const int8_t MIN_GIMBAL_ANGLE = -40;
-    const int8_t MAX_GIMBAL_ANGLE = 40;
+    static const uint32_t CONTROL_CYCLE_TIME = osKernelSysTickMicroSec(CONTROL_CYCLE_MS * 1000);
+    static const float MIN_GIMBAL_ANGLE = -40.0;
+    static const float MAX_GIMBAL_ANGLE = 40.0;
 
-    int8_t a_outer, a_inner;
+    float a_outer, a_inner;
     Servo_t servo_outer, servo_inner;
     servo_init(&servo_outer, SERVO_OUTER, &htim2, TIM_CHANNEL_1);
     servo_init(&servo_inner, SERVO_INNER, &htim2, TIM_CHANNEL_2);
 
-    TickType_t xLastWakeTime;
-    xLastWakeTime = xTaskGetTickCount();
+    TickType_t xLastWakeTime = xTaskGetTickCount();
     for(;;)
     {
         osDelayUntil(&xLastWakeTime, CONTROL_CYCLE_TIME);
@@ -511,12 +536,12 @@ void StartControlTask(void const * argument)
             continue;
         }
 
-        read_byte_from_table(TABLE_IDX_OUTER_GIMBAL_ANGLE, (uint8_t*)&a_outer);
-        read_byte_from_table(TABLE_IDX_INNER_GIMBAL_ANGLE, (uint8_t*)&a_inner);
+        read_table(TABLE_IDX_OUTER_GIMBAL_ANGLE, (uint8_t*)&a_outer, sizeof(float));
+        read_table(TABLE_IDX_INNER_GIMBAL_ANGLE, (uint8_t*)&a_inner, sizeof(float));
 
         // Make sure we don't move the servos to angles outside these bounds
-        a_outer = bound_int8_t(a_outer, MIN_GIMBAL_ANGLE, MAX_GIMBAL_ANGLE);
-        a_inner = bound_int8_t(a_inner, MIN_GIMBAL_ANGLE, MAX_GIMBAL_ANGLE);
+        a_outer = bound_float(a_outer, MIN_GIMBAL_ANGLE, MAX_GIMBAL_ANGLE);
+        a_inner = bound_float(a_inner, MIN_GIMBAL_ANGLE, MAX_GIMBAL_ANGLE);
 
         // Update motor angles
         servo_set_position(&servo_outer, (float)a_outer);
