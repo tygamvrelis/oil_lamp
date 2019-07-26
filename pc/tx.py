@@ -24,16 +24,14 @@ def transmit_angles(ser, a_outer, a_inner, dryrun=False):
         dryrun : bool
             Prints angles to shell if True, otherwise sends to MCU
     '''
-    # Should be able to get away with sending 2 bytes -- I doubt we need better
-    # accuracy than int
-    a_outer = int(np.round(a_outer))
-    a_inner = int(np.round(a_inner))
-    
     if dryrun:
         logString("Outer: {0}|Inner: {1}".format(a_outer, a_inner))
     else:
         cmd_id = CMD_ANGLE.encode() # A => Angle payload
-        payload = struct.pack('<b', a_outer) + struct.pack('<b', a_inner)
+        # It turns out that rounding error for ints is noticable, especially at
+        # low playback frequencies (e.g. 0.5*sin(pi*t). So, we're sticking with
+        # floats
+        payload = struct.pack('<f', a_outer) + struct.pack('<f', a_inner)
         packet = cmd_id + payload
         ser.write(packet)
     return
