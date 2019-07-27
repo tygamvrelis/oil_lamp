@@ -153,7 +153,10 @@ def parse_args():
         help='Sends a sine wave of a given frequency and amplitude to the'
              ' servos. For example --sine=1.0 sends a sine wave of 1 Hz, and'
              ' --sine=1,22.5 sends a sine wave of 1 Hz with amplitude 22.5.'
-             ' Default frequency is 1.0 Hz and default amplitude is 40.0',
+             ' Default frequency is 1.0 Hz and default amplitude is 40.0. The'
+             ' third argument is a time constant for the envelope (default 0).'
+             ' For example, --sine=1,22.5,1 decreases in amplitude by a factor'
+             ' of 2 at time t=ln(2)/1 = 0.693 seconds.',
         default=''
     )
     

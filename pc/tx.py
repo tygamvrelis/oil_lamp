@@ -154,6 +154,8 @@ def change_imu_usage(port, baud, use_imus):
 def send_sine_wave(port, baud, params, servo):
     '''
     Sends a sine wave to the microcontroller for servo actuation
+    
+    output = amp * exp(-tau * t) * sin(2 * pi * f * t)
     --------
     Arguments:
         port : serial.Serial
@@ -167,13 +169,23 @@ def send_sine_wave(port, baud, params, servo):
     '''
     f_default = 1.0
     amp_default = 40.0
+    tau_default = -1
     
     has_sep=False
     if "," in params:
         has_sep=True
 
     if has_sep:
-        freq, amp = params.split(",")
+        # Ugly way of doing this, but it works...
+        if len(params.split(",")) == 3:
+            freq, amp, tau = params.split(",")
+            try:
+                tau = float(tau)
+            except ValueError:
+                tau = tau_default
+        else:
+            freq, amp = params.split(",")
+            tau = tau_default
         try:
             amp = float(amp)
         except ValueError:
@@ -188,6 +200,7 @@ def send_sine_wave(port, baud, params, servo):
         except ValueError:
             freq = f_default
         amp = amp_default
+        tau = tau_default
 
     logString(list_ports())
     logString("Attempting connection to embedded")
@@ -202,7 +215,7 @@ def send_sine_wave(port, baud, params, servo):
             enable_servos(ser)
             while True:
                 t = time.time() - t_s
-                val = amp * np.sin(2 * np.pi * freq * t)
+                val = amp * np.exp(-tau * t) * np.sin(2 * np.pi * freq * t)
                 if servo == 'outer':
                     transmit_angles(ser, val, 0)
                 elif servo == 'inner':
