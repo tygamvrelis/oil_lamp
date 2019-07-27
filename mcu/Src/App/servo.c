@@ -48,13 +48,11 @@ void servo_init(
 
 void servo_set_position(Servo_t* p_servo, float angle)
 {
-    float fpos = (float)bound_float(angle, POS_MIN, POS_MAX) - POS_MIN;
-    float FPOS_MAX = POS_MAX;
-    float FPOS_MIN = POS_MIN;
+    float fpos = bound_float(angle, POS_MIN, POS_MAX) - POS_MIN;
     float FPOS_MAX_DC = POS_MAX_DUTY_CYCLE;
     float FPOS_MIN_DC = POS_MIN_DUTY_CYCLE;
 
-    uint32_t tim = (fpos / (FPOS_MAX - FPOS_MIN)) * (FPOS_MAX_DC - FPOS_MIN_DC) + FPOS_MIN_DC;
+    uint32_t tim = (fpos / (POS_MAX - POS_MIN)) * (FPOS_MAX_DC - FPOS_MIN_DC) + FPOS_MIN_DC;
     __HAL_TIM_SET_COMPARE(p_servo->htim, p_servo->channel, tim);
 }
 

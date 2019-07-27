@@ -387,7 +387,7 @@ void StartRxTask(void const * argument)
                     if (cnt == sizeof(float))
                     {
                         write_table(
-                            TABLE_IDX_OUTER_GIMBAL_ANGLE,
+                            TABLE_IDX_INNER_GIMBAL_ANGLE,
                             (uint8_t*)&tmp_angle,
                             sizeof(float)
                         );
@@ -544,8 +544,8 @@ void StartControlTask(void const * argument)
         a_inner = bound_float(a_inner, MIN_GIMBAL_ANGLE, MAX_GIMBAL_ANGLE);
 
         // Update motor angles
-        servo_set_position(&servo_outer, (float)a_outer);
-        servo_set_position(&servo_inner, (float)a_inner);
+        servo_set_position(&servo_outer, a_outer);
+        servo_set_position(&servo_inner, a_inner);
     }
   /* USER CODE END StartControlTask */
 }
