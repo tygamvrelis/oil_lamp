@@ -169,7 +169,7 @@ def send_sine_wave(port, baud, params, servo):
     '''
     f_default = 1.0
     amp_default = 40.0
-    tau_default = -1
+    tau_default = 0
     
     has_sep=False
     if "," in params:
