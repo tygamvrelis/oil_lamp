@@ -29,7 +29,7 @@ def transmit_angles(ser, a_outer, a_inner, dryrun=False):
     else:
         cmd_id = CMD_ANGLE.encode() # A => Angle payload
         # It turns out that rounding error for ints is noticable, especially at
-        # low playback frequencies (e.g. 0.5*sin(pi*t) and for small angles. So
+        # low playback frequencies (e.g. 10*sin(2*pi*0.1*t)) and for small angles. So
         # we're sticking with floats
         payload = struct.pack('<f', a_outer) + struct.pack('<f', a_inner)
         packet = cmd_id + payload
