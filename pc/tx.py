@@ -29,8 +29,8 @@ def transmit_angles(ser, a_outer, a_inner, dryrun=False):
     else:
         cmd_id = CMD_ANGLE.encode() # A => Angle payload
         # It turns out that rounding error for ints is noticable, especially at
-        # low playback frequencies (e.g. 0.5*sin(pi*t). So, we're sticking with
-        # floats
+        # low playback frequencies (e.g. 0.5*sin(pi*t) and for small angles. So
+        # we're sticking with floats
         payload = struct.pack('<f', a_outer) + struct.pack('<f', a_inner)
         packet = cmd_id + payload
         ser.write(packet)
@@ -151,7 +151,7 @@ def change_imu_usage(port, baud, use_imus):
         else:
             logString("Serial exception")
 
-def send_sine_wave(port, baud, params, servo):
+def send_sine_wave(port, baud, params, servo, verbose):
     '''
     Sends a sine wave to the microcontroller for servo actuation
     
@@ -166,6 +166,8 @@ def send_sine_wave(port, baud, params, servo):
             String containing amplitude and frequency of sine wave
         servo : string
             Specifies which servo(s) to send the waveform to
+        verbose : bool
+            Prints additional messages if True
     '''
     f_default = 1.0
     amp_default = 40.0
@@ -219,10 +221,12 @@ def send_sine_wave(port, baud, params, servo):
                 if servo == 'outer':
                     transmit_angles(ser, val, 0)
                 elif servo == 'inner':
-                    transmit_angles(ser, a, val)
+                    transmit_angles(ser, 0, val)
                 else:
                     transmit_angles(ser, val, val)
                 time.sleep(0.01)
+                if verbose:
+                    print(val)
     except serial.serialutil.SerialException as e:
         if(str(e).find("FileNotFoundError")):
             logString("Port not found")

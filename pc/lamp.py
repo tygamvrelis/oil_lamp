@@ -42,7 +42,7 @@ def main():
         send_servo_angles(port, baud, angles)
     elif sine_params:
         logString("Sending sine wave")
-        send_sine_wave(port, baud, sine_params, args['servo'])
+        send_sine_wave(port, baud, sine_params, args['servo'], verbose)
     elif use_servos != None:
         change_servo_usage(port, baud, use_servos)
     elif use_imus != None:
