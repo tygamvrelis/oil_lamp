@@ -24,16 +24,14 @@ def transmit_angles(ser, a_outer, a_inner, dryrun=False):
         dryrun : bool
             Prints angles to shell if True, otherwise sends to MCU
     '''
-    # Should be able to get away with sending 2 bytes -- I doubt we need better
-    # accuracy than int
-    a_outer = int(np.round(a_outer))
-    a_inner = int(np.round(a_inner))
-    
     if dryrun:
         logString("Outer: {0}|Inner: {1}".format(a_outer, a_inner))
     else:
         cmd_id = CMD_ANGLE.encode() # A => Angle payload
-        payload = struct.pack('<b', a_outer) + struct.pack('<b', a_inner)
+        # It turns out that rounding error for ints is noticable, especially at
+        # low playback frequencies (e.g. 10*sin(2*pi*0.1*t)) and for small angles. So
+        # we're sticking with floats
+        payload = struct.pack('<f', a_outer) + struct.pack('<f', a_inner)
         packet = cmd_id + payload
         ser.write(packet)
     return
@@ -153,9 +151,11 @@ def change_imu_usage(port, baud, use_imus):
         else:
             logString("Serial exception")
 
-def send_sine_wave(port, baud, params, servo):
+def send_sine_wave(port, baud, params, servo, verbose):
     '''
     Sends a sine wave to the microcontroller for servo actuation
+    
+    output = amp * exp(-tau * t) * sin(2 * pi * f * t)
     --------
     Arguments:
         port : serial.Serial
@@ -166,16 +166,28 @@ def send_sine_wave(port, baud, params, servo):
             String containing amplitude and frequency of sine wave
         servo : string
             Specifies which servo(s) to send the waveform to
+        verbose : bool
+            Prints additional messages if True
     '''
     f_default = 1.0
     amp_default = 40.0
+    tau_default = 0
     
     has_sep=False
     if "," in params:
         has_sep=True
 
     if has_sep:
-        freq, amp = params.split(",")
+        # Ugly way of doing this, but it works...
+        if len(params.split(",")) == 3:
+            freq, amp, tau = params.split(",")
+            try:
+                tau = float(tau)
+            except ValueError:
+                tau = tau_default
+        else:
+            freq, amp = params.split(",")
+            tau = tau_default
         try:
             amp = float(amp)
         except ValueError:
@@ -190,6 +202,7 @@ def send_sine_wave(port, baud, params, servo):
         except ValueError:
             freq = f_default
         amp = amp_default
+        tau = tau_default
 
     logString(list_ports())
     logString("Attempting connection to embedded")
@@ -204,14 +217,16 @@ def send_sine_wave(port, baud, params, servo):
             enable_servos(ser)
             while True:
                 t = time.time() - t_s
-                val = amp * np.sin(2 * np.pi * freq * t)
+                val = amp * np.exp(-tau * t) * np.sin(2 * np.pi * freq * t)
                 if servo == 'outer':
                     transmit_angles(ser, val, 0)
                 elif servo == 'inner':
-                    transmit_angles(ser, a, val)
+                    transmit_angles(ser, 0, val)
                 else:
                     transmit_angles(ser, val, val)
                 time.sleep(0.01)
+                if verbose:
+                    print(val)
     except serial.serialutil.SerialException as e:
         if(str(e).find("FileNotFoundError")):
             logString("Port not found")
