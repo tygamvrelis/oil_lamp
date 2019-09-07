@@ -35,7 +35,7 @@
 #include "App/table.h"
 #include "App/sensing.h"
 #include "App/rx.h"
-#include "App/servo.h"
+#include "Dynamixel/DynamixelProtocolV1.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -523,9 +523,20 @@ void StartControlTask(void const * argument)
     static const float MAX_GIMBAL_ANGLE = 40.0;
 
     float a_outer, a_inner;
-    Servo_t servo_outer, servo_inner;
-    servo_init(&servo_outer, SERVO_OUTER, &htim2, TIM_CHANNEL_1);
-    servo_init(&servo_inner, SERVO_INNER, &htim2, TIM_CHANNEL_2);
+    Dynamixel_HandleTypeDef servo_outer;
+    const uint8_t OUTER_ID = 5, INNER_ID = 6;
+    Dynamixel_Init(&servo_outer, OUTER_ID, &huart2, AX12A_DIR_GPIO_Port, AX12A_DIR_Pin, AX12ATYPE);
+    Dynamixel_TorqueEnable(&servo_outer, 1);
+    Dynamixel_SetGoalTorque(&servo_outer, 100.0);
+    AX12A_SetComplianceMargin(&servo_outer, 2);
+    AX12A_SetComplianceSlope(&servo_outer, 5);
+
+    Dynamixel_HandleTypeDef servo_inner;
+    Dynamixel_Init(&servo_inner, INNER_ID, &huart2, AX12A_DIR_GPIO_Port, AX12A_DIR_Pin, AX12ATYPE);
+    Dynamixel_SetGoalTorque(&servo_inner, 100.0);
+    Dynamixel_TorqueEnable(&servo_inner, 1);
+    AX12A_SetComplianceMargin(&servo_inner, 2);
+    AX12A_SetComplianceSlope(&servo_inner, 5);
 
     TickType_t xLastWakeTime = xTaskGetTickCount();
     for(;;)
@@ -544,8 +555,8 @@ void StartControlTask(void const * argument)
         a_inner = bound_float(a_inner, MIN_GIMBAL_ANGLE, MAX_GIMBAL_ANGLE);
 
         // Update motor angles
-        servo_set_position(&servo_outer, a_outer);
-        servo_set_position(&servo_inner, a_inner);
+        Dynamixel_SetGoalPosition(&servo_outer, a_outer);
+        Dynamixel_SetGoalPosition(&servo_inner, a_inner);
     }
   /* USER CODE END StartControlTask */
 }
