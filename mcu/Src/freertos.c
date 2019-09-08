@@ -75,7 +75,7 @@ osThreadId ImuHandle;
 uint32_t ImuTaskBuffer[ 128 ];
 osStaticThreadDef_t ImuTaskControlBlock;
 osThreadId ControlHandle;
-uint32_t ControlTaskBuffer[ 128 ];
+uint32_t ControlTaskBuffer[ 512 ];
 osStaticThreadDef_t ControlTaskControlBlock;
 osTimerId StatusLEDTmrHandle;
 osStaticTimerDef_t StatusLEDTmrControlBlock;
@@ -274,7 +274,7 @@ void MX_FREERTOS_Init(void) {
   ImuHandle = osThreadCreate(osThread(Imu), NULL);
 
   /* definition and creation of Control */
-  osThreadStaticDef(Control, StartControlTask, osPriorityNormal, 0, 128, ControlTaskBuffer, &ControlTaskControlBlock);
+  osThreadStaticDef(Control, StartControlTask, osPriorityNormal, 0, 512, ControlTaskBuffer, &ControlTaskControlBlock);
   ControlHandle = osThreadCreate(osThread(Control), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
@@ -523,9 +523,11 @@ void StartControlTask(void const * argument)
     static const float MAX_GIMBAL_ANGLE = 40.0;
     float a_outer, a_inner;
 
+    Dynamixel_SetIOType(IO_DMA);
+
     Dynamixel_HandleTypeDef servo_outer;
     const uint8_t OUTER_ID = 5;
-    Dynamixel_Init(&servo_outer, OUTER_ID, &huart2, AX12A_DIR_GPIO_Port, AX12A_DIR_Pin, AX12ATYPE);
+    Dynamixel_Init(&servo_outer, OUTER_ID, &huart1, AX12A_DIR_GPIO_Port, AX12A_DIR_Pin, AX12ATYPE);
     Dynamixel_SetGoalTorque(&servo_outer, 100.0);
     Dynamixel_TorqueEnable(&servo_outer, 1);
     AX12A_SetComplianceMargin(&servo_outer, 2);
@@ -533,7 +535,7 @@ void StartControlTask(void const * argument)
 
     Dynamixel_HandleTypeDef servo_inner;
     const uint8_t INNER_ID = 6;
-    Dynamixel_Init(&servo_inner, INNER_ID, &huart2, AX12A_DIR_GPIO_Port, AX12A_DIR_Pin, AX12ATYPE);
+    Dynamixel_Init(&servo_inner, INNER_ID, &huart1, AX12A_DIR_GPIO_Port, AX12A_DIR_Pin, AX12ATYPE);
     Dynamixel_SetGoalTorque(&servo_inner, 100.0);
     Dynamixel_TorqueEnable(&servo_inner, 1);
     AX12A_SetComplianceMargin(&servo_inner, 2);
