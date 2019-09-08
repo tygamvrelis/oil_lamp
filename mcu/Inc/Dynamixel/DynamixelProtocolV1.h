@@ -22,6 +22,7 @@
 #endif
 
 /* I/O */
+#define THREADED
 #include "gpio.h"
 #include "usart.h"
 

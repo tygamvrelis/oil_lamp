@@ -41,7 +41,6 @@ typedef enum IO_FLAGS{
 /** @brief Enumerates the types of Dynamixel actuators the library supports */
 typedef enum motorTypes_e{
 	AX12ATYPE,      /**< AX12A actuator */
-	MX28TYPE        /**< MX28 actuator  */
 }motorTypes_t;
 
 // TODO: Should also have a resolution divider field for MX28

@@ -35,6 +35,7 @@
 #include "App/table.h"
 #include "App/sensing.h"
 #include "App/rx.h"
+#include "Dynamixel/Notification.h"
 #include "Dynamixel/DynamixelProtocolV1.h"
 /* USER CODE END Includes */
 
@@ -509,7 +510,6 @@ void StartImuTask(void const * argument)
 * @retval None
 */
 /* USER CODE END Header_StartControlTask */
-#include <math.h>
 void StartControlTask(void const * argument)
 {
   /* USER CODE BEGIN StartControlTask */
@@ -521,17 +521,18 @@ void StartControlTask(void const * argument)
     static const uint32_t CONTROL_CYCLE_TIME = osKernelSysTickMicroSec(CONTROL_CYCLE_MS * 1000);
     static const float MIN_GIMBAL_ANGLE = -40.0;
     static const float MAX_GIMBAL_ANGLE = 40.0;
-
     float a_outer, a_inner;
+
     Dynamixel_HandleTypeDef servo_outer;
-    const uint8_t OUTER_ID = 5, INNER_ID = 6;
+    const uint8_t OUTER_ID = 5;
     Dynamixel_Init(&servo_outer, OUTER_ID, &huart2, AX12A_DIR_GPIO_Port, AX12A_DIR_Pin, AX12ATYPE);
-    Dynamixel_TorqueEnable(&servo_outer, 1);
     Dynamixel_SetGoalTorque(&servo_outer, 100.0);
+    Dynamixel_TorqueEnable(&servo_outer, 1);
     AX12A_SetComplianceMargin(&servo_outer, 2);
     AX12A_SetComplianceSlope(&servo_outer, 5);
 
     Dynamixel_HandleTypeDef servo_inner;
+    const uint8_t INNER_ID = 6;
     Dynamixel_Init(&servo_inner, INNER_ID, &huart2, AX12A_DIR_GPIO_Port, AX12A_DIR_Pin, AX12ATYPE);
     Dynamixel_SetGoalTorque(&servo_inner, 100.0);
     Dynamixel_TorqueEnable(&servo_inner, 1);
@@ -635,6 +636,9 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart){
         BaseType_t xHigherPriorityTaskWoken = pdFALSE;
         if (huart->Instance == USART2 && TxSemHandle != NULL){
             xSemaphoreGiveFromISR(TxSemHandle, &xHigherPriorityTaskWoken);
+        }
+        else if(huart->Instance == USART1){
+            xTaskNotifyFromISR(ControlHandle, NOTIFIED_FROM_TX_ISR, eSetBits, &xHigherPriorityTaskWoken);
         }
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
     }

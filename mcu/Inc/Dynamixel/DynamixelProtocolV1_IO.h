@@ -29,6 +29,10 @@ extern "C" {
 
 
 /***************************** Function prototypes ***************************/
+void Dynamixel_SetIOType(enum IO_FLAGS type);
+
+enum IO_FLAGS Dynamixel_GetIOType();
+
 // Low-level transmission and reception functions
 void Dynamixel_DataWriter(
         Dynamixel_HandleTypeDef* hdynamixel,

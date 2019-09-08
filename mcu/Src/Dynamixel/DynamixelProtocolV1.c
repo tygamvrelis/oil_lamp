@@ -26,10 +26,10 @@
 
 #include "gpio.h"
 #include "usart.h"
-#include "Dynamixel_Types.h"
-#include "AX12A.h"
-#include "Dynamixel_Data.h"
-#include "DynamixelProtocolV1_IO.h"
+#include "Dynamixel/Dynamixel_Types.h"
+#include "Dynamixel/AX12A.h"
+#include "Dynamixel/Dynamixel_Data.h"
+#include "Dynamixel/DynamixelProtocolV1_IO.h"
 
 
 
@@ -171,43 +171,16 @@ void Dynamixel_SetID(Dynamixel_HandleTypeDef* hdynamixel, uint8_t ID){
 void Dynamixel_SetBaudRate(Dynamixel_HandleTypeDef* hdynamixel, uint32_t baud){
     uint8_t baudArg = 0x01; // Default to 1 Mbps
 
-    if(hdynamixel -> _motorType == AX12ATYPE){
-        /* Set _baud equal to the hex code corresponding to baud. Default to 1
-         * Mbps. */
-        if(baud > 0){
-            /* Valid for baud in range [7844, 1000000]. Will be converted to
-             * 8-bit resolution. */
-            baudArg = (uint8_t)((2000000 / baud) - 1);
-        }
-        else{
-            /* Default to 1 Mbps. */
-            baudArg = AX12A_DEFAULT_BAUD_RATE;
-        }
+    /* Set _baud equal to the hex code corresponding to baud. Default to 1
+     * Mbps. */
+    if(baud > 0){
+        /* Valid for baud in range [7844, 1000000]. Will be converted to
+         * 8-bit resolution. */
+        baudArg = (uint8_t)((2000000 / baud) - 1);
     }
-    else if(hdynamixel -> _motorType == MX28TYPE){
-        /* Set _baud equal to the hex code corresponding to baud. Default to 1
-         * Mbps. */
-        if(baud >= 9600 && baud <= 3500000){
-            if(baud >= 2250000){
-                if(baud < 2500000){
-                    baudArg = 250;
-                }
-                else if(baud < 3000000){
-                    baudArg = 251;
-                }
-                else{
-                    baudArg = 252;
-                }
-            }
-            else{
-                baudArg = (uint8_t)((2000000 / baud) - 1);
-            }
-        }
-        else{
-            /* Default to 1000000 symbols/s (MX28_DEFAULT_BAUD_RATE is not to
-             * be used for our application) */
-            baudArg = 0x01;
-        }
+    else{
+        /* Default to 1 Mbps. */
+        baudArg = AX12A_DEFAULT_BAUD_RATE;
     }
 
     /* Write data to motor. */
@@ -268,12 +241,7 @@ void Dynamixel_SetCWAngleLimit(Dynamixel_HandleTypeDef* hdynamixel, float minAng
     if((minAngle > MIN_ANGLE) && (minAngle <= MAX_ANGLE)){
 
         /* Translate the angle from degrees into a 10-bit number. */
-        if(hdynamixel -> _motorType == AX12ATYPE){
-            normalized_value = (uint16_t)(minAngle / MAX_ANGLE * 1023);
-        }
-        else if(hdynamixel -> _motorType == MX28TYPE){
-            normalized_value = (uint16_t)(minAngle / MAX_ANGLE * 4095);
-        }
+        normalized_value = (uint16_t)(minAngle / MAX_ANGLE * 1023);
     }
 
     uint8_t lowByte = (uint8_t)(normalized_value & 0xFF); // Low byte of CW angle limit
@@ -305,24 +273,13 @@ void Dynamixel_SetCWAngleLimit(Dynamixel_HandleTypeDef* hdynamixel, float minAng
 void Dynamixel_SetCCWAngleLimit(Dynamixel_HandleTypeDef* hdynamixel, float maxAngle){
     /* Initialize local variable to default value. */
     uint16_t normalized_value = AX12A_DEFAULT_CCW_ANGLE_LIMIT; // default
-    if(hdynamixel -> _motorType == AX12ATYPE){
-        normalized_value = AX12A_DEFAULT_CCW_ANGLE_LIMIT;
-    }
-    else if(hdynamixel -> _motorType == MX28TYPE){
-        normalized_value = MX28_DEFAULT_CCW_ANGLE_LIMIT;
-    }
+    normalized_value = AX12A_DEFAULT_CCW_ANGLE_LIMIT;
 
     /* Evaluate argument validity. Optimize for edge case maxAngle = MAX_ANGLE. */
     if((maxAngle >= MIN_ANGLE) && (maxAngle < MAX_ANGLE)){
 
         /* Translate the angle from degrees into a 10-bit number. */
-        if(hdynamixel -> _motorType == AX12ATYPE){
-            normalized_value = (uint16_t)(maxAngle / MAX_ANGLE * 1023);
-        }
-        else if(hdynamixel -> _motorType == MX28TYPE){
-            normalized_value = (uint16_t)(maxAngle / MAX_ANGLE * 4095);
-        }
-
+        normalized_value = (uint16_t)(maxAngle / MAX_ANGLE * 1023);
     }
 
     uint8_t lowByte = (uint8_t)(normalized_value & 0xFF); // Low byte of CCW angle limit
@@ -347,13 +304,7 @@ void Dynamixel_SetCCWAngleLimit(Dynamixel_HandleTypeDef* hdynamixel, float maxAn
 void Dynamixel_SetHighestVoltageLimit(Dynamixel_HandleTypeDef* hdynamixel, float highestVoltage){
     /* Declare local variable. Initialize to default value. */
     uint8_t high_voltage_data = AX12A_DEFAULT_HIGHEST_VOLTAGE_LIMIT; // minimum is safer to default to
-
-    if(hdynamixel -> _motorType == AX12ATYPE){
-        high_voltage_data = AX12A_DEFAULT_HIGHEST_VOLTAGE_LIMIT;
-    }
-    else if(hdynamixel -> _motorType == MX28TYPE){
-        high_voltage_data = MX28_DEFAULT_HIGHEST_VOLTAGE_LIMIT;
-    }
+    high_voltage_data = AX12A_DEFAULT_HIGHEST_VOLTAGE_LIMIT;
 
     /* Evaluate argument validity and translate into motor data. Optimize for highestVoltage = MAX_VOLTAGE. */
     if((highestVoltage >= MIN_VOLTAGE) && (highestVoltage < MAX_VOLTAGE)){
@@ -592,16 +543,7 @@ void Dynamixel_SetGoalPosition(Dynamixel_HandleTypeDef* hdynamixel, float goalAn
 
     /* Translate the angle from degrees into a 10- or 12-bit number. */
     uint16_t normalized_value = 0;
-    if(hdynamixel -> _motorType == AX12ATYPE){
-        normalized_value = (uint16_t)(goalAngle / MAX_ANGLE * 1023);
-    }
-    else if(hdynamixel -> _motorType == MX28TYPE){
-        normalized_value = (uint16_t)(goalAngle / MAX_ANGLE * 4095);
-    }
-    else{
-        // Should NEVER reach here!
-    }
-
+    normalized_value = (uint16_t)(goalAngle / MAX_ANGLE * 1023);
     uint8_t lowByte = (uint8_t)(normalized_value & 0xFF); // Low byte of goal position
     uint8_t highByte = (uint8_t)((normalized_value >> 8) & 0xFF); // High byte of goal position
 
@@ -633,40 +575,20 @@ void Dynamixel_SetGoalVelocity(Dynamixel_HandleTypeDef* hdynamixel, float goalVe
         /* Check for input validity. If input not valid, replace goalAngle with closest
          * valid value to ensure code won't halt. */
         if(goalVelocity != 0){
-            if(hdynamixel -> _motorType == AX12ATYPE){
-                if((goalVelocity < MIN_VELOCITY) || (goalVelocity > AX12A_MAX_VELOCITY)){
-                    if(goalVelocity > MIN_VELOCITY){
-                        goalVelocity = AX12A_MAX_VELOCITY;
-                    }
-                    else{
-                        goalVelocity = MIN_VELOCITY;
-                    }
+            if((goalVelocity < MIN_VELOCITY) || (goalVelocity > AX12A_MAX_VELOCITY)){
+                if(goalVelocity > MIN_VELOCITY){
+                    goalVelocity = AX12A_MAX_VELOCITY;
                 }
-            }
-            else if(hdynamixel -> _motorType == MX28TYPE){
-                if((goalVelocity < MIN_VELOCITY) || (goalVelocity > MX28_MAX_VELOCITY)){
-                    if(goalVelocity > MIN_VELOCITY){
-                        goalVelocity = MX28_MAX_VELOCITY;
-                    }
-                    else{
-                        goalVelocity = MIN_VELOCITY;
-                    }
+                else{
+                    goalVelocity = MIN_VELOCITY;
                 }
             }
         }
     }
 
-    if(hdynamixel -> _motorType == AX12ATYPE){
-        normalized_value = (uint16_t)(goalVelocity / AX12A_MAX_VELOCITY * 1023);
-        if(goalVelocity < 0){
-            normalized_value = ((uint16_t)((goalVelocity * -1) / AX12A_MAX_VELOCITY * 1023)) | 0b000010000000000;
-        }
-    }
-    else if(hdynamixel -> _motorType == MX28TYPE){
-        normalized_value = (uint16_t)(goalVelocity / MX28_MAX_VELOCITY * 1023);
-        if(goalVelocity < 0){
-            normalized_value = ((uint16_t)((goalVelocity * -1) / MX28_MAX_VELOCITY * 1023)) | 0b000010000000000;
-        }
+    normalized_value = (uint16_t)(goalVelocity / AX12A_MAX_VELOCITY * 1023);
+    if(goalVelocity < 0){
+        normalized_value = ((uint16_t)((goalVelocity * -1) / AX12A_MAX_VELOCITY * 1023)) | 0b000010000000000;
     }
 
     uint8_t lowByte = (uint8_t)(normalized_value & 0xFF); // Low byte of goal velocity
@@ -804,12 +726,7 @@ void Dynamixel_GetPosition(Dynamixel_HandleTypeDef* hdynamixel){
 
     /* Parse data and write it into motor handle. */
     if(hdynamixel->_lastReadIsValid){
-        if(hdynamixel -> _motorType == AX12ATYPE){
-            hdynamixel -> _lastPosition = (float)(retVal * 300 / 1023.0);
-        }
-        else if(hdynamixel -> _motorType == MX28TYPE){
-            hdynamixel -> _lastPosition = (float)(retVal * 300 / 4095.0);
-        }
+        hdynamixel -> _lastPosition = (float)(retVal * 300 / 1023.0);
     }
     else{
         hdynamixel -> _lastPosition = INFINITY;
@@ -840,13 +757,7 @@ void Dynamixel_GetVelocity(Dynamixel_HandleTypeDef* hdynamixel){
         else{
             modifier = 2047;
         }
-
-        if(hdynamixel -> _motorType == AX12ATYPE){
-            hdynamixel -> _lastVelocity = (float)(retVal / modifier * AX12A_MAX_VELOCITY);
-        }
-        else if(hdynamixel -> _motorType == MX28TYPE){
-            hdynamixel -> _lastVelocity = (float)(retVal / modifier * MX28_MAX_VELOCITY);
-        }
+        hdynamixel -> _lastVelocity = (float)(retVal / modifier * AX12A_MAX_VELOCITY);
     }
     else{
         hdynamixel -> _lastVelocity = INFINITY;
