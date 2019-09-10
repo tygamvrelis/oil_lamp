@@ -509,7 +509,6 @@ void StartImuTask(void const * argument)
 * @retval None
 */
 /* USER CODE END Header_StartControlTask */
-#include <math.h>
 void StartControlTask(void const * argument)
 {
   /* USER CODE BEGIN StartControlTask */

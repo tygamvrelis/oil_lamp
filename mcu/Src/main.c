@@ -100,6 +100,8 @@ int main(void)
   MX_I2C3_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
+  HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_2);
   init_imu(&imu_base, &hi2c1);
   init_imu(&imu_lamp, &hi2c3);
   /* USER CODE END 2 */
