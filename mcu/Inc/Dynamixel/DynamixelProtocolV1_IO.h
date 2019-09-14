@@ -21,6 +21,7 @@ extern "C" {
 
 
 /********************************* Includes **********************************/
+#define THREADED
 #include <stdint.h>
 #include <stdbool.h>
 #include "Dynamixel_Types.h"

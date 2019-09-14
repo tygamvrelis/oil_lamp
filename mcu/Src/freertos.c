@@ -526,20 +526,21 @@ void StartControlTask(void const * argument)
     Dynamixel_SetIOType(IO_DMA);
 
     Dynamixel_HandleTypeDef servo_outer;
-    const uint8_t OUTER_ID = 5;
+    const uint8_t OUTER_ID = 10;
+    const uint8_t COMPLIANCE_MARGIN = 7; // 5 was jerky
     Dynamixel_Init(&servo_outer, OUTER_ID, &huart1, AX12A_DIR_GPIO_Port, AX12A_DIR_Pin, AX12ATYPE);
     Dynamixel_SetGoalTorque(&servo_outer, 100.0);
     Dynamixel_TorqueEnable(&servo_outer, 1);
-    AX12A_SetComplianceMargin(&servo_outer, 2);
-    AX12A_SetComplianceSlope(&servo_outer, 5);
+    AX12A_SetComplianceMargin(&servo_outer, 1);
+    AX12A_SetComplianceSlope(&servo_outer, COMPLIANCE_MARGIN);
 
     Dynamixel_HandleTypeDef servo_inner;
     const uint8_t INNER_ID = 6;
     Dynamixel_Init(&servo_inner, INNER_ID, &huart1, AX12A_DIR_GPIO_Port, AX12A_DIR_Pin, AX12ATYPE);
     Dynamixel_SetGoalTorque(&servo_inner, 100.0);
     Dynamixel_TorqueEnable(&servo_inner, 1);
-    AX12A_SetComplianceMargin(&servo_inner, 2);
-    AX12A_SetComplianceSlope(&servo_inner, 5);
+    AX12A_SetComplianceMargin(&servo_inner, 1);
+    AX12A_SetComplianceSlope(&servo_inner, COMPLIANCE_MARGIN);
 
     TickType_t xLastWakeTime = xTaskGetTickCount();
     for(;;)
@@ -556,6 +557,11 @@ void StartControlTask(void const * argument)
         // Make sure we don't move the servos to angles outside these bounds
         a_outer = bound_float(a_outer, MIN_GIMBAL_ANGLE, MAX_GIMBAL_ANGLE);
         a_inner = bound_float(a_inner, MIN_GIMBAL_ANGLE, MAX_GIMBAL_ANGLE);
+
+        // 0 degrees in the lamp's coordinate system is 180 degrees in the
+        // Dynamixel one
+        a_outer += 180.0;
+        a_inner += 180.0;
 
         // Update motor angles
         Dynamixel_SetGoalPosition(&servo_outer, a_outer);
