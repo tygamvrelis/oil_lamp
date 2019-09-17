@@ -281,6 +281,8 @@ def playback(port, baud, fname, loop, use_legacy_sign_convention, verbose):
                     for angle_vec in angles.T:
                         outer_angle = angle_vec[BASE_OUTER] + angle_vec[LAMP_OUTER]
                         inner_angle = angle_vec[BASE_INNER] + angle_vec[LAMP_INNER]
+                        if verbose:
+                            logString("Outer: {0}|Inner: {1}".format(outer_angle, inner_angle))
                         # Send angles and wait a few ms before sending again
                         transmit_angles(ser, outer_angle, inner_angle)
                         tx_cycle.wait()
