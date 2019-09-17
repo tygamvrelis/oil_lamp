@@ -16,3 +16,6 @@ The floor, the ceiling, and the side, are all awry. ‘Oh! so my conscience hang
 ‘straight upwards, so it burns; but the chambers of my soul are all in crookedness!’ (83)
 
 Herman Melville; Moby Dick (1851).
+
+```
+![title](https://github.com/tygamvrelis/oil_lamp/blob/master/docs/Oil_lamp_original.jpg)
