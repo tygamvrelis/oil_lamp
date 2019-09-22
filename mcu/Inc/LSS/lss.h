@@ -35,6 +35,13 @@ typedef struct
     UART_HandleTypeDef* p_uart; /**< UART handle for motor */
 }lss_t;
 
+/** @brief Enumerates the low-level I/O modes the library supports */
+typedef enum IO_FLAGS{
+    IO_DMA,  /**< Direct memory access */
+    IO_POLL, /**< Polled I/O           */
+    IO_IT    /**< Interrupt-based I/O  */
+}ioFlags_t;
+
 
 
 
@@ -105,15 +112,17 @@ void lss_set_hs(lss_t* hlss, int8_t holding_stiffness);
 /**
  * @brief Varies the servo's angular acceleration
  * @param hlss Handle for the motor
- * @param angular_accel Angular acceleration in increments of 10 deg/s/s
+ * @param angular_accel Angular acceleration in increments of 10 deg/s/s in
+ *        range [1,100]
  */
-void lss_set_aa(lss_t* hlss, int8_t angular_accel);
+void lss_set_aa(lss_t* hlss, uint8_t angular_accel);
 
 /**
  * @brief Varies the servo's angular deceleration
  * @param hlss Handle for the motor
- * @param angular_decel Angular deceleration in increments of 10 deg/s/s
+ * @param angular_decel Angular deceleration in increments of 10 deg/s/s in
+ *        range [1,100]
  */
-void lss_set_ad(lss_t* hlss, int8_t angular_decel);
+void lss_set_ad(lss_t* hlss, uint8_t angular_decel);
 
 #endif /* LSS_H */
