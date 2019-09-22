@@ -42,6 +42,19 @@ typedef enum IO_FLAGS{
     IO_IT    /**< Interrupt-based I/O  */
 }ioFlags_t;
 
+typedef enum COLORS{
+    LSS_OFF = 0,
+    LSS_BLACK = 0,
+    LSS_RED,
+    LSS_GREEN,
+    LSS_BLUE,
+    LSS_YELLOW,
+    LSS_CYAN,
+    LSS_MAGENTA,
+    LSS_WHITE,
+    LSS_COLOR_MAX
+}lss_colors_t;
+
 
 
 
@@ -91,6 +104,13 @@ void lss_set_baud(lss_t* hlss, uint32_t baud_rate);
  * @param id ID to program into the motor
  */
 void lss_set_id(lss_t* hlss, uint8_t id);
+
+/**
+ * @brief Sets the LED color
+ * @param hlss Handle for the motor
+ * @param color LED color
+ */
+void lss_set_led(lss_t* hlss, lss_colors_t color);
 
 /**
  * @brief Varies how much quickly the motor accelerates/decelerates to get to

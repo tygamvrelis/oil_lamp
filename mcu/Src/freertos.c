@@ -527,15 +527,15 @@ void StartControlTask(void const * argument)
 
     const int8_t ANGULAR_STIFFNESS = 0;
     const int8_t HOLDING_STIFFNESS = 0;
-    const uint8_t OUTER_ID = 10;
+    const uint8_t OUTER_ID = 1;
     lss_t servo_outer = {OUTER_ID, &huart1};
-    lss_set_as(&servo_outer, ANGULAR_STIFFNESS);
-    lss_set_as(&servo_outer, HOLDING_STIFFNESS);
+    //lss_set_as(&servo_outer, ANGULAR_STIFFNESS);
+    //lss_set_as(&servo_outer, HOLDING_STIFFNESS);
 
-    const uint8_t INNER_ID = 10;
+    const uint8_t INNER_ID = 0;
     lss_t servo_inner = {INNER_ID, &huart1};
-    lss_set_as(&servo_inner, ANGULAR_STIFFNESS);
-    lss_set_as(&servo_inner, HOLDING_STIFFNESS);
+    //lss_set_as(&servo_inner, ANGULAR_STIFFNESS);
+    //lss_set_as(&servo_inner, HOLDING_STIFFNESS);
 
     TickType_t xLastWakeTime = xTaskGetTickCount();
     for(;;)

@@ -107,7 +107,7 @@ void lss_reset(lss_t* hlss)
     uint8_t buff[16];
     uint8_t length = snprintf((char*)buff, 16, "#%dRESET", hlss->id);
     buff[length] = '\r'; // Overwrite null character with cmd termination
-    lss_transmit(hlss, buff, length);
+    lss_transmit(hlss, buff, length + 1);
 }
 
 //-----------------------------------------------------------------------------
@@ -117,7 +117,7 @@ void lss_set_position(lss_t* hlss, float angle)
     uint8_t buff[16];
     uint8_t length = snprintf((char*)buff, 16, "#%dD%d", hlss->id, (int)(10.0 * angle));
     buff[length] = '\r'; // Overwrite null character with cmd termination
-    lss_transmit(hlss, buff, length);
+    lss_transmit(hlss, buff, length + 1);
 }
 
 //-----------------------------------------------------------------------------
@@ -127,7 +127,7 @@ void lss_set_baud(lss_t* hlss, uint32_t baud_rate)
     uint8_t buff[16];
     uint8_t length = snprintf((char*)buff, 16, "#%dCB%lu", hlss->id, baud_rate);
     buff[length] = '\r'; // Overwrite null character with cmd termination
-    lss_transmit(hlss, buff, length);
+    lss_transmit(hlss, buff, length + 1);
 }
 
 //-----------------------------------------------------------------------------
@@ -137,7 +137,22 @@ void lss_set_id(lss_t* hlss, uint8_t id)
     uint8_t buff[16];
     uint8_t length = snprintf((char*)buff, 16, "#%dCID%d", hlss->id, id);
     buff[length] = '\r'; // Overwrite null character with cmd termination
-    lss_transmit(hlss, buff, length);
+    lss_transmit(hlss, buff, length + 1);
+    hlss->id = id;
+}
+
+//-----------------------------------------------------------------------------
+
+void lss_set_led(lss_t* hlss, lss_colors_t color)
+{
+    if (color >= LSS_COLOR_MAX)
+    {
+        return;
+    }
+    uint8_t buff[16];
+    uint8_t length = snprintf((char*)buff, 16, "#%dLED%d", hlss->id, color);
+    buff[length] = '\r'; // Overwrite null character with cmd termination
+    lss_transmit(hlss, buff, length + 1);
 }
 
 //-----------------------------------------------------------------------------
@@ -147,7 +162,7 @@ void lss_set_as(lss_t* hlss, int8_t angular_stiffness)
     uint8_t buff[16];
     uint8_t length = snprintf((char*)buff, 16, "#%dCAS%d", hlss->id, angular_stiffness);
     buff[length] = '\r'; // Overwrite null character with cmd termination
-    lss_transmit(hlss, buff, length);
+    lss_transmit(hlss, buff, length + 1);
 }
 
 //-----------------------------------------------------------------------------
@@ -157,7 +172,7 @@ void lss_set_hs(lss_t* hlss, int8_t holding_stiffness)
     uint8_t buff[16];
     uint8_t length = snprintf((char*)buff, 16, "#%dCA%d", hlss->id, holding_stiffness);
     buff[length] = '\r'; // Overwrite null character with cmd termination
-    lss_transmit(hlss, buff, length);
+    lss_transmit(hlss, buff, length + 1);
 }
 
 //-----------------------------------------------------------------------------
@@ -167,7 +182,7 @@ void lss_set_aa(lss_t* hlss, uint8_t angular_accel)
     uint8_t buff[16];
     uint8_t length = snprintf((char*)buff, 16, "#%dCA%d", hlss->id, angular_accel);
     buff[length] = '\r'; // Overwrite null character with cmd termination
-    lss_transmit(hlss, buff, length);
+    lss_transmit(hlss, buff, length + 1);
 }
 
 //-----------------------------------------------------------------------------
@@ -178,7 +193,7 @@ void lss_set_ad(lss_t* hlss, uint8_t angular_decel)
     uint8_t buff[16];
     uint8_t length = snprintf((char*)buff, 16, "#%dCD%d", hlss->id, angular_decel);
     buff[length] = '\r'; // Overwrite null character with cmd termination
-    lss_transmit(hlss, buff, length);
+    lss_transmit(hlss, buff, length + 1);
 }
 
 /**
