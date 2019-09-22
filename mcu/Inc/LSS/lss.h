@@ -40,6 +40,29 @@ typedef struct
 
 /***************************** Function prototypes ***************************/
 /**
+ * @brief   Sets the I/O type used by the library
+ * @details Sets the IO protocol to one of three options:
+ *              -# Blocking (Polling)
+ *              -# Non-Blocking (Interrupt)
+ *              -# DMA
+ * @param   type one of IO_POLL, IO_IT, or IO_DMA
+ * @return  None
+ */
+void lss_set_io_type(enum IO_FLAGS type);
+
+/**
+ * @brief   Gets the IO protocol setting for the library
+ * @return  One of IO_POLL, IO_IT, or IO_DMA
+ */
+enum IO_FLAGS lss_get_io_type();
+
+/**
+ * @brief Soft reset of motor
+ * @param hlss Handle for the motor
+ */
+void lss_reset(lss_t* hlss);
+
+/**
  * @brief Sends command to move the servo to the specified angle
  * @param hlss Handle for the motor
  * @param angle Desired angle for motor

@@ -30,7 +30,7 @@
 //#include "SystemConf.h"
 
 #if defined(THREADED)
-#include "Dynamixel/Notification.h"
+#include "App/Notification.h"
 #include "cmsis_os.h"
 #endif
 
