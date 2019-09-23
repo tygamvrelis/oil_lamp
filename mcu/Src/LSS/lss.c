@@ -122,6 +122,16 @@ void lss_set_position(lss_t* hlss, float angle)
 
 //-----------------------------------------------------------------------------
 
+void lss_set_position_timed(lss_t* hlss, float angle, uint16_t time_ms)
+{
+    uint8_t buff[16];
+    uint8_t length = snprintf((char*)buff, 16, "#%dD%dT%d", hlss->id, (int)(10.0 * angle), time_ms);
+    buff[length] = '\r'; // Overwrite null character with cmd termination
+    lss_transmit(hlss, buff, length + 1);
+}
+
+//-----------------------------------------------------------------------------
+
 void lss_set_speed(lss_t* hlss, float deg_per_sec)
 {
     if (deg_per_sec > 180.0)
@@ -165,6 +175,20 @@ void lss_set_led(lss_t* hlss, lss_colors_t color)
     }
     uint8_t buff[16];
     uint8_t length = snprintf((char*)buff, 16, "#%dLED%d", hlss->id, color);
+    buff[length] = '\r'; // Overwrite null character with cmd termination
+    lss_transmit(hlss, buff, length + 1);
+}
+
+//-----------------------------------------------------------------------------
+
+void lss_toggle_motion_ctrl(lss_t* hlss, lss_em_t enable)
+{
+    if (enable >= LSS_EM_MAX)
+    {
+        return;
+    }
+    uint8_t buff[16];
+    uint8_t length = snprintf((char*)buff, 16, "#%dEM%d", hlss->id, enable);
     buff[length] = '\r'; // Overwrite null character with cmd termination
     lss_transmit(hlss, buff, length + 1);
 }

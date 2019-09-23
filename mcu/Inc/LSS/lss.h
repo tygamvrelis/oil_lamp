@@ -17,6 +17,7 @@
 
 /********************************* Includes **********************************/
 #include <stdint.h>
+#include <stdbool.h>
 #include "usart.h"
 
 
@@ -55,6 +56,13 @@ typedef enum COLORS{
     LSS_COLOR_MAX
 }lss_colors_t;
 
+typedef enum EM
+{
+    LSS_EM0=0, // Disable motion control
+    LSS_EM1=1, // Enable motion control
+    LSS_EM_MAX
+}lss_em_t;
+
 
 
 
@@ -84,11 +92,18 @@ void lss_reset(lss_t* hlss);
 
 /**
  * @brief Sends command to move the servo to the specified angle
- * @param hlss Handle for the motor
+ * @param hlss Handle for the motor in degrees
  * @param angle Desired angle for motor
- * TODO: Support timed move (T) and speed (S) modifiers
  */
 void lss_set_position(lss_t* hlss, float angle);
+
+/**
+ * @brief Sends position command with timed move (T) modifier
+ * @param hlss Handle for the motor
+ * @param angle Desired angle for motor in degrees
+ * @param time_ms Desired travel time to goal position, expresse din ms
+ */
+void lss_set_position_timed(lss_t* hlss, float angle, uint16_t time_ms);
 
 /**
  * @brief Sets the servo's max speed
@@ -118,6 +133,12 @@ void lss_set_id(lss_t* hlss, uint8_t id);
  * @param color LED color
  */
 void lss_set_led(lss_t* hlss, lss_colors_t color);
+
+/**
+ * @brief Turns the motion control algorithms in the servo on or off
+ * @param enable Enables motion control if true, else disables it
+ */
+void lss_toggle_motion_ctrl(lss_t* hlss, lss_em_t enable);
 
 /**
  * @brief Varies how much quickly the motor accelerates/decelerates to get to
