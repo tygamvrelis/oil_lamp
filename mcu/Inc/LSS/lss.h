@@ -91,6 +91,13 @@ void lss_reset(lss_t* hlss);
 void lss_set_position(lss_t* hlss, float angle);
 
 /**
+ * @brief Sets the servo's max speed
+ * @param hlss Handle for the motor
+ * @param deg_per_sec Max speed in degrees/s. Up to 180.0 is allowed
+ */
+void lss_set_speed(lss_t* hlss, float deg_per_sec);
+
+/**
  * @brief Sets the motor's baud rate
  * @param hlss Handle for the motor
  * @param baud_rate Baud rate to set. Must be one of 9600, 19200, 38400, 57600,

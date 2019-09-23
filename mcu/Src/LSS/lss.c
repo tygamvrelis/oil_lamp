@@ -122,6 +122,20 @@ void lss_set_position(lss_t* hlss, float angle)
 
 //-----------------------------------------------------------------------------
 
+void lss_set_speed(lss_t* hlss, float deg_per_sec)
+{
+    if (deg_per_sec > 180.0)
+    {
+        deg_per_sec = 180.0;
+    }
+    uint8_t buff[16];
+    uint8_t length = snprintf((char*)buff, 16, "#%dCSD%d", hlss->id, (int)(10.0 * deg_per_sec));
+    buff[length] = '\r'; // Overwrite null character with cmd termination
+    lss_transmit(hlss, buff, length + 1);
+}
+
+//-----------------------------------------------------------------------------
+
 void lss_set_baud(lss_t* hlss, uint32_t baud_rate)
 {
     uint8_t buff[16];
@@ -170,7 +184,7 @@ void lss_set_as(lss_t* hlss, int8_t angular_stiffness)
 void lss_set_hs(lss_t* hlss, int8_t holding_stiffness)
 {
     uint8_t buff[16];
-    uint8_t length = snprintf((char*)buff, 16, "#%dCA%d", hlss->id, holding_stiffness);
+    uint8_t length = snprintf((char*)buff, 16, "#%dCAH%d", hlss->id, holding_stiffness);
     buff[length] = '\r'; // Overwrite null character with cmd termination
     lss_transmit(hlss, buff, length + 1);
 }
@@ -180,18 +194,17 @@ void lss_set_hs(lss_t* hlss, int8_t holding_stiffness)
 void lss_set_aa(lss_t* hlss, uint8_t angular_accel)
 {
     uint8_t buff[16];
-    uint8_t length = snprintf((char*)buff, 16, "#%dCA%d", hlss->id, angular_accel);
+    uint8_t length = snprintf((char*)buff, 16, "#%dCAA%d", hlss->id, angular_accel);
     buff[length] = '\r'; // Overwrite null character with cmd termination
     lss_transmit(hlss, buff, length + 1);
 }
 
 //-----------------------------------------------------------------------------
 
-
 void lss_set_ad(lss_t* hlss, uint8_t angular_decel)
 {
     uint8_t buff[16];
-    uint8_t length = snprintf((char*)buff, 16, "#%dCD%d", hlss->id, angular_decel);
+    uint8_t length = snprintf((char*)buff, 16, "#%dCAD%d", hlss->id, angular_decel);
     buff[length] = '\r'; // Overwrite null character with cmd termination
     lss_transmit(hlss, buff, length + 1);
 }
