@@ -525,14 +525,14 @@ void StartControlTask(void const * argument)
 
     lss_set_io_type(IO_DMA);
 
-    const int8_t ANGULAR_STIFFNESS = 0;
+    const int8_t ANGULAR_STIFFNESS = -4;
     const int8_t HOLDING_STIFFNESS = 0;
     const uint8_t OUTER_ID = 1;
     lss_t servo_outer = {OUTER_ID, &huart1};
     lss_toggle_motion_ctrl(&servo_outer, LSS_EM0);
     lss_set_speed(&servo_outer, 180.0);
-    lss_set_aa(&servo_outer, 100);
-    lss_set_ad(&servo_outer, 100);
+    lss_set_aa(&servo_outer, 1000);
+    lss_set_ad(&servo_outer, 1000);
     lss_set_as(&servo_outer, ANGULAR_STIFFNESS);
     lss_set_hs(&servo_outer, HOLDING_STIFFNESS);
 

@@ -215,7 +215,7 @@ void lss_set_hs(lss_t* hlss, int8_t holding_stiffness)
 
 //-----------------------------------------------------------------------------
 
-void lss_set_aa(lss_t* hlss, uint8_t angular_accel)
+void lss_set_aa(lss_t* hlss, uint16_t angular_accel)
 {
     uint8_t buff[16];
     uint8_t length = snprintf((char*)buff, 16, "#%dCAA%d", hlss->id, angular_accel);
@@ -225,7 +225,7 @@ void lss_set_aa(lss_t* hlss, uint8_t angular_accel)
 
 //-----------------------------------------------------------------------------
 
-void lss_set_ad(lss_t* hlss, uint8_t angular_decel)
+void lss_set_ad(lss_t* hlss, uint16_t angular_decel)
 {
     uint8_t buff[16];
     uint8_t length = snprintf((char*)buff, 16, "#%dCAD%d", hlss->id, angular_decel);
