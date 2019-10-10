@@ -81,6 +81,8 @@ void Error_Handler(void);
 #define IMU_LAMP_SDA_GPIO_Port GPIOC
 #define IMU_LAMP_SCL_Pin GPIO_PIN_8
 #define IMU_LAMP_SCL_GPIO_Port GPIOA
+#define AX12A_DIR_Pin GPIO_PIN_11
+#define AX12A_DIR_GPIO_Port GPIOA
 #define TMS_Pin GPIO_PIN_13
 #define TMS_GPIO_Port GPIOA
 #define TCK_Pin GPIO_PIN_14

@@ -35,7 +35,8 @@
 #include "App/table.h"
 #include "App/sensing.h"
 #include "App/rx.h"
-#include "App/servo.h"
+#include "App/Notification.h"
+#include "LSS/lss.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -74,7 +75,7 @@ osThreadId ImuHandle;
 uint32_t ImuTaskBuffer[ 128 ];
 osStaticThreadDef_t ImuTaskControlBlock;
 osThreadId ControlHandle;
-uint32_t ControlTaskBuffer[ 128 ];
+uint32_t ControlTaskBuffer[ 512 ];
 osStaticThreadDef_t ControlTaskControlBlock;
 osTimerId StatusLEDTmrHandle;
 osStaticTimerDef_t StatusLEDTmrControlBlock;
@@ -273,7 +274,7 @@ void MX_FREERTOS_Init(void) {
   ImuHandle = osThreadCreate(osThread(Imu), NULL);
 
   /* definition and creation of Control */
-  osThreadStaticDef(Control, StartControlTask, osPriorityNormal, 0, 128, ControlTaskBuffer, &ControlTaskControlBlock);
+  osThreadStaticDef(Control, StartControlTask, osPriorityNormal, 0, 512, ControlTaskBuffer, &ControlTaskControlBlock);
   ControlHandle = osThreadCreate(osThread(Control), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
@@ -520,11 +521,31 @@ void StartControlTask(void const * argument)
     static const uint32_t CONTROL_CYCLE_TIME = osKernelSysTickMicroSec(CONTROL_CYCLE_MS * 1000);
     static const float MIN_GIMBAL_ANGLE = -40.0;
     static const float MAX_GIMBAL_ANGLE = 40.0;
-
     float a_outer, a_inner;
-    Servo_t servo_outer, servo_inner;
-    servo_init(&servo_outer, SERVO_OUTER, &htim2, TIM_CHANNEL_1);
-    servo_init(&servo_inner, SERVO_INNER, &htim2, TIM_CHANNEL_2);
+
+    lss_set_io_type(IO_DMA);
+
+    const int8_t ANGULAR_STIFFNESS = -4;
+    const int8_t HOLDING_STIFFNESS = 0;
+    const uint8_t OUTER_ID = 1;
+    lss_t servo_outer = {OUTER_ID, &huart1};
+    lss_set_led(&servo_outer, LSS_OFF);
+    lss_toggle_motion_ctrl(&servo_outer, LSS_EM0);
+    lss_set_speed(&servo_outer, 180.0);
+    lss_set_aa(&servo_outer, 1000);
+    lss_set_ad(&servo_outer, 1000);
+    lss_set_as(&servo_outer, ANGULAR_STIFFNESS);
+    lss_set_hs(&servo_outer, HOLDING_STIFFNESS);
+
+    const uint8_t INNER_ID = 0;
+    lss_t servo_inner = {INNER_ID, &huart1};
+    lss_set_led(&servo_inner, LSS_OFF);
+    lss_toggle_motion_ctrl(&servo_inner, LSS_EM0);
+    lss_set_speed(&servo_inner, 180.0);
+    lss_set_aa(&servo_inner, 1000);
+    lss_set_ad(&servo_inner, 1000);
+    lss_set_as(&servo_inner, ANGULAR_STIFFNESS);
+    lss_set_hs(&servo_inner, HOLDING_STIFFNESS);
 
     TickType_t xLastWakeTime = xTaskGetTickCount();
     for(;;)
@@ -543,8 +564,8 @@ void StartControlTask(void const * argument)
         a_inner = bound_float(a_inner, MIN_GIMBAL_ANGLE, MAX_GIMBAL_ANGLE);
 
         // Update motor angles
-        servo_set_position(&servo_outer, a_outer);
-        servo_set_position(&servo_inner, a_inner);
+        lss_set_position(&servo_outer, a_outer);
+        lss_set_position(&servo_inner, a_inner);
     }
   /* USER CODE END StartControlTask */
 }
@@ -623,6 +644,9 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart){
         BaseType_t xHigherPriorityTaskWoken = pdFALSE;
         if (huart->Instance == USART2 && TxSemHandle != NULL){
             xSemaphoreGiveFromISR(TxSemHandle, &xHigherPriorityTaskWoken);
+        }
+        else if(huart->Instance == USART1){
+            xTaskNotifyFromISR(ControlHandle, NOTIFIED_FROM_TX_ISR, eSetBits, &xHigherPriorityTaskWoken);
         }
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
     }
