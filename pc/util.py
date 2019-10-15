@@ -102,7 +102,7 @@ def parse_args():
         '--set_baseline',
         help=' Specifies a file to use for generating calibration offsets. This '
              ' can be used to account for the IMUs being mounted at angles '
-             ' relative to the lamp and base.',
+             ' relative to the lamp and base',
         default=''
     )
     
@@ -118,8 +118,8 @@ def parse_args():
     parser.add_argument(
         '--use_legacy_sign_convention',
         help='(analyze, playback, and set_baseline option) Set this to True for '
-             ' data recorded prior to July 2019. Ignore for data recorded after '
-             ' this',
+             ' data recorded using microcontroller firmware older than July '
+             ' 2019. Set to False otherwise',
         type=str2bool,
         default=False
     )
@@ -134,7 +134,7 @@ def parse_args():
     parser.add_argument(
         '--loop',
         help='(playback option) If we go through all the angles, begin again if'
-             ' this is True. Otherwise, quit.',
+             ' this is True. Otherwise, quit',
         type=str2bool,
         default=True
     )
@@ -156,7 +156,7 @@ def parse_args():
              ' Default frequency is 1.0 Hz and default amplitude is 40.0. The'
              ' third argument is a time constant for the envelope (default 0).'
              ' For example, --sine=1,22.5,1 decreases in amplitude by a factor'
-             ' of 2 at time t=ln(2)/1 = 0.693 seconds.',
+             ' of 2 at time t=ln(2)/1 = 0.693 seconds',
         default=''
     )
     

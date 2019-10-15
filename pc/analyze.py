@@ -211,7 +211,7 @@ def analyze(fname, imu_to_plot, estimate, use_calibration, use_legacy_sign_conve
         if use_calibration:
             fig_name += "_calibrated"
         fig_name += '.png'
-        fig_name = os.path.join(get_data_dir(), fig_name)
+        fig_name = os.path.join(get_data_dir(), os.path.dirname(fname), fig_name)
         plt.savefig(fig_name)
         logString("Saved fig to {0}".format(fig_name))
         plt.close();
