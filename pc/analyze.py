@@ -133,11 +133,33 @@ def analyze(fname, imu_to_plot, estimate, use_calibration, use_legacy_sign_conve
         files = glob.glob(glob_str)
         fname = max(files, key=os.path.getctime)
 
+    imu_data, num_samples, time_stamps = load_data_from_file( \
+        fname, \
+        use_calibration=use_calibration, \
+        use_legacy_sign_convention=use_legacy_sign_convention \
+    )
     SAMPLE_RATE = 100.0 # Hz
-    imu_data, num_samples = load_data_from_file(fname, use_calibration=use_calibration, use_legacy_sign_convention=use_legacy_sign_convention)
-    # TODO (tyler): consider generating this time array from the time data that
-    # TODO is logged
-    t = np.linspace(0, num_samples / SAMPLE_RATE, num=num_samples, endpoint=False)
+    USE_TIME_STAMPS = 1 # TODO: make argument to function
+    if not USE_TIME_STAMPS:
+        # Use sample rate as source of truth for timing info
+        t = np.linspace(0, num_samples / SAMPLE_RATE, num=num_samples, endpoint=False)
+    else:
+        # Use time stamps as source of truth for timing info (should be more
+        # reliable)
+        ts = time_stamps[0]
+        tf = time_stamps[-1]
+        delta_t = tf - ts # Total elapsed time
+        num_time_slots = np.ceil(100.0 * delta_t.seconds + delta_t.microseconds / (1000.0 * 10.0))
+        t = np.linspace(0, num_time_slots, num=num_time_slots, endpoint=False)
+        # Now we need to make a new array to hold IMU info. This array will
+        # contain perfect 10 ms spacing between samples. The IMU info will need
+        # to be copied into the closest unoccupied slot, and then we'll need to
+        # interpolate over missing slots
+        imu_data_ts = np.zeros_like(t)
+        for i in range(imu_data.shape[1]):
+            dt = time_stamps[i] - ts
+            idx = 100.0 * dt.seconds + dt.microseconds / (1000.0 * 10.0)
+        # Print out number of interpolated points
 
     fig, ax = plt.subplots()
     size = 2

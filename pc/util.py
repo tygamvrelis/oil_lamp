@@ -571,7 +571,7 @@ def load_data_from_file(file_name, use_calibration=False, interp_nan=True, use_l
     
     # May need to adjust lines due to data looking like newline character
     too_small = [(line, idx) for idx, line in enumerate(bin_data) if len(line) != LOGGED_BUF_SIZE]
-    idx_to_del = [e[1] for e in too_small]
+    idx_to_del = list()
     assert(len(too_small) == 0 or len(too_small) > 1), "Invalid number of lines are too small"
     if len(too_small) > 0:
         cur_line, cur_ind = too_small.pop(0)
@@ -579,6 +579,7 @@ def load_data_from_file(file_name, use_calibration=False, interp_nan=True, use_l
         line, ind = too_small.pop(0)
         if len(bin_data[cur_ind]) < LOGGED_BUF_SIZE:
             bin_data[cur_ind] = bin_data[cur_ind] + line
+            idx_to_del.append(ind)
         else:
             cur_ind = ind
     for index in sorted(idx_to_del, reverse=True):
@@ -587,9 +588,11 @@ def load_data_from_file(file_name, use_calibration=False, interp_nan=True, use_l
     num_samples = len(bin_data)
     
     # Interpret the binary data as floats
-    imu_data = np.ndarray(shape=(int(IMU_BUF_SIZE / 4),num_samples))
+    imu_data = np.ndarray(shape=(int(IMU_BUF_SIZE / 4), num_samples))
+    time_stamps = list()
     for i in range(num_samples):
         imu_data[:,i] = decode_data(bin_data[i][20:-1])
+        time_stamps.append(datetime.strptime(str(bin_data[i][0:12])[2:-1], '%H:%M:%S.%f'))
     
     # Interpolate NaN, if requested and needed
     if interp_nan:
@@ -609,7 +612,7 @@ def load_data_from_file(file_name, use_calibration=False, interp_nan=True, use_l
     elif use_legacy_sign_convention:
         imu_data = apply_legacy_sign_convention(imu_data)
     
-    return imu_data, num_samples
+    return imu_data, num_samples, time_stamps
 
 class WaitForMs:
     '''
