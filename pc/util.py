@@ -571,7 +571,7 @@ def load_data_from_file(file_name, use_calibration=False, interp_nan=True, use_l
     
     # May need to adjust lines due to data looking like newline character
     too_small = [(line, idx) for idx, line in enumerate(bin_data) if len(line) != LOGGED_BUF_SIZE]
-    idx_to_del = [e[1] for e in too_small]
+    idx_to_del = list()
     assert(len(too_small) == 0 or len(too_small) > 1), "Invalid number of lines are too small"
     if len(too_small) > 0:
         cur_line, cur_ind = too_small.pop(0)
@@ -579,6 +579,7 @@ def load_data_from_file(file_name, use_calibration=False, interp_nan=True, use_l
         line, ind = too_small.pop(0)
         if len(bin_data[cur_ind]) < LOGGED_BUF_SIZE:
             bin_data[cur_ind] = bin_data[cur_ind] + line
+            idx_to_del.append(ind)
         else:
             cur_ind = ind
     for index in sorted(idx_to_del, reverse=True):
