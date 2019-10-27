@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "args": ["--analyze=oct_16_2019\\Lamp_time_Test.dat", "--estimate=ind_angles", "--imu=both"]
+            "args": ["--analyze=oct_16_2019\\Lamp_time_Test.dat", "--estimate=ind_angles", "--imu=both", "--plot_slice=1000,1000.01"]
         }
     ]
 }

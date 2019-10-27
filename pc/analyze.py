@@ -169,10 +169,10 @@ def analyze(fname, imu_to_plot, estimate, use_calibration, \
         start_idx = int(np.round(t_start * (num_samples / (t[-1] - t[0]))))
         end_idx = int(np.round(t_end * (num_samples / (t[-1] - t[0]))))
         # Slice!
-        t = t[start_idx:end_idx]
-        imu_data = imu_data[:,start_idx:end_idx]
-        angles = angles[:,start_idx:end_idx]
-        num_samples = end_idx - start_idx # TODO(tyler): shouldn't this have + 1 at end?
+        t = t[start_idx:end_idx+1]
+        imu_data = imu_data[:,start_idx:end_idx+1]
+        angles = angles[:,start_idx:end_idx+1]
+        num_samples = end_idx - start_idx + 1
 
     fig, ax = plt.subplots()
     size = 2
