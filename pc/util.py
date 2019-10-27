@@ -100,7 +100,8 @@ def parse_args():
 
     parser.add_argument(
         '--plot_slice',
-        help='(analyze option) Plots the data between two specific times',
+        help='(analyze option) Plots the data between two specific times '
+             ' Arguments: start time, end time. Example: --plot_slice=10,20',
         default=''
     )
     

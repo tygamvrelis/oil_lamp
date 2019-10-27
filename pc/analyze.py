@@ -154,10 +154,25 @@ def analyze(fname, imu_to_plot, estimate, use_calibration, \
         time_stamps, \
         use_time_stamps \
     )
+    angles = get_angles(imu_data, num_samples)
 
     if plot_slice:
         t_start, t_end = plot_slice.split(',')
-        print(t_start, t_end)
+        t_start = float(t_start)
+        t_end = float(t_end)
+        # Bounds check!
+        if t_end > t[-1]:
+            logString( \
+                "--plot slice end time exceeds end time of data ({0})".format(t[-1]) \
+            )
+            quit()
+        start_idx = int(np.round(t_start * (num_samples / (t[-1] - t[0]))))
+        end_idx = int(np.round(t_end * (num_samples / (t[-1] - t[0]))))
+        # Slice!
+        t = t[start_idx:end_idx]
+        imu_data = imu_data[:,start_idx:end_idx]
+        angles = angles[:,start_idx:end_idx]
+        num_samples = end_idx - start_idx # TODO(tyler): shouldn't this have + 1 at end?
 
     fig, ax = plt.subplots()
     size = 2
@@ -204,8 +219,6 @@ def analyze(fname, imu_to_plot, estimate, use_calibration, \
     else:
         # TODO: (Tyler) Only do both base and lamp if arg == "both" (i.e. 
         # TODO:         optimize cases where analyzing individual IMUs)
-    
-        angles = get_angles(imu_data, num_samples)
         if estimate == "ind_angles":
             # Plot pitch and roll separately for each IMU
             if imu_to_plot == "base" or imu_to_plot == "both":
