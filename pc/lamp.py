@@ -20,10 +20,12 @@ def main():
     baseline_fname = args['set_baseline']
     angles = args['set_angles']
     sine_params = args['sine']
+    plot_slice = args['plot_slice']
     use_servos = args['use_servos']
     use_imus = args['use_imus']
     verbose = args['verbose']
     
+    # Validate args!
     if (playback_fname and analyze_fname) or \
        (playback_fname and baseline_fname) or \
        (analyze_fname and baseline_fname):
@@ -31,6 +33,25 @@ def main():
                   " Please only choose one of these")
         quit()
     
+    if plot_slice:
+        if not ',' in plot_slice:
+            logString("Invalid arguments for --plot_slice. "
+                "Example of valid usage: --plot_slice=10,20")
+            quit()
+        t_start, t_end = plot_slice.split(',')
+        t_start = float(t_start)
+        t_end = float(t_end)
+        if t_start < 0:
+            logString("--plot_slice start time must be >= 0!")
+            quit()
+        if t_end < 0:
+            logString("--plot_slice end time must be >= 0!")
+            quit()
+        if t_start > t_end:
+            logString("--plot_slice start time must be >= end time!")
+            quit()
+    
+    # Call requested function
     if analyze_fname:
         logString("Starting analysis")
         analyze( \
@@ -39,7 +60,8 @@ def main():
             args['estimate'], \
             args['use_calibration'], \
             args['use_legacy_sign_convention'], \
-            args['use_time_stamps'] \
+            args['use_time_stamps'], \
+            plot_slice \
         )
     elif playback_fname:
         logString("Starting playback")
