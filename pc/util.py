@@ -123,6 +123,15 @@ def parse_args():
         type=str2bool,
         default=False
     )
+
+    parser.add_argument(
+        '--use_time_stamps',
+        help='(analyze and playback option) Specifies whether to use time '
+             ' stamps (true time) to construct the time series, or to blindly '
+             ' trust sampling rate * number of samples'
+             ' Default: True',
+        default=True
+    )
     
     parser.add_argument(
         '--playback',
@@ -592,7 +601,12 @@ def load_data_from_file(file_name, use_calibration=False, interp_nan=True, use_l
     time_stamps = list()
     for i in range(num_samples):
         imu_data[:,i] = decode_data(bin_data[i][20:-1])
-        time_stamps.append(datetime.strptime(str(bin_data[i][0:12])[2:-1], '%H:%M:%S.%f'))
+        if sys.version_info > (3, 0):
+            # Python 3
+            time_stamps.append(datetime.strptime(str(bin_data[i][0:12])[2:-1], '%H:%M:%S.%f'))
+        else:
+            # Python 2
+            time_stamps.append(datetime.strptime(str(bin_data[i][0:12]), '%H:%M:%S.%f'))
     
     # Interpolate NaN, if requested and needed
     if interp_nan:
@@ -613,6 +627,81 @@ def load_data_from_file(file_name, use_calibration=False, interp_nan=True, use_l
         imu_data = apply_legacy_sign_convention(imu_data)
     
     return imu_data, num_samples, time_stamps
+
+def make_time_series(imu_data, num_samples, time_stamps, use_time_stamps):
+    '''
+    Constructs a time series from the given IMU data. Can construct based on
+    true time (time stamps) or sampling rate * number of samples. Use true time
+    for the best accuracy if you trust your computer's clock!
+
+    Note: as long as your computer can measure time *intervals* accurately,
+        the time stamps are the most robust way to construct the time series
+
+    ----------
+    Arguments
+        imu_data : np.ndarray
+            Array of IMU data
+        num_samples : int
+            number of samples loaded from recording file
+        time_stamps : list of datetime
+            Time stamp for each IMU data sample
+        use_time_stamps : bool
+            If True, constructs time series based on time stamps. Interpolates
+            missing data as needed. Otherwise, creates time series of size
+            num_samples
+    
+    Returns:
+        t : np.ndarray
+            Array of time indexes for IMU data
+        imu_data : np.ndarray
+            Updated IMU data (e.g. may contain interpolated points)
+        
+    '''
+    SAMPLE_RATE = 100.0 # Hz
+    if not use_time_stamps:
+        # Use sample rate as source of truth for timing info
+        t = np.linspace(0, num_samples / SAMPLE_RATE, num=num_samples, endpoint=False)
+    else:
+        # Use time stamps as source of truth for timing info (should be more
+        # reliable)
+        ts = time_stamps[0]
+        tf = time_stamps[-1]
+        delta_t = tf - ts # Total elapsed time
+        num_time_slots = int( \
+            np.ceil( \
+                SAMPLE_RATE * delta_t.seconds + \
+                delta_t.microseconds / (1000.0 * (1000.0 / SAMPLE_RATE)) \
+            ) + 1 \
+        )
+        t = np.linspace(0, num_time_slots, num=num_time_slots, endpoint=False)
+        # Now we need to make a new array to hold IMU info. This array will
+        # contain perfect 10 ms spacing between samples. The IMU info will need
+        # to be copied into the closest unoccupied slot, and then we'll need to
+        # interpolate over missing slots
+        imu_data_ts = np.empty(shape=(int(IMU_BUF_SIZE / 4), t.shape[0]))
+        imu_data_ts.fill(np.nan)
+        for i in range(imu_data.shape[1]):
+            dt = time_stamps[i] - ts
+            idx = int(
+                np.round( \
+                    SAMPLE_RATE * dt.seconds + \
+                    dt.microseconds / (1000.0 * (1000.0 / SAMPLE_RATE)) \
+                ) \
+            )
+            imu_data_ts[:,idx] = imu_data[:,i]
+        # Interpolate missing points (identified as NaN), if they exist
+        for i in range(imu_data_ts.shape[0]):
+            nans, idx = nan_helper(imu_data_ts[i,:])
+            imu_data_ts[i,nans] = np.interp(idx(nans), idx(~nans), imu_data_ts[i,~nans])
+        # Print out number of interpolated points
+        logString("Interpolated {0} points in time series".format( \
+            len([n for n in nans if n == True])) \
+        )
+        # Update previously-assigned variables that will be used (generically)
+        # below
+        imu_data = imu_data_ts
+        num_samples = num_time_slots
+    return t, imu_data, num_samples
 
 class WaitForMs:
     '''

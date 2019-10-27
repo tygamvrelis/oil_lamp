@@ -33,10 +33,25 @@ def main():
     
     if analyze_fname:
         logString("Starting analysis")
-        analyze(analyze_fname, args['imu'], args['estimate'], args['use_calibration'], args['use_legacy_sign_convention'])
+        analyze( \
+            analyze_fname, \
+            args['imu'], \
+            args['estimate'], \
+            args['use_calibration'], \
+            args['use_legacy_sign_convention'], \
+            args['use_time_stamps'] \
+        )
     elif playback_fname:
         logString("Starting playback")
-        playback(port, baud, playback_fname, args['loop'], args['use_legacy_sign_convention'], verbose)
+        playback( \
+            port, \
+            baud, \
+            playback_fname, \
+            args['loop'], \
+            args['use_legacy_sign_convention'], 
+            args['use_time_stamps'], \
+            verbose \
+        )
     elif angles:
         logString("Setting servo angles")
         send_servo_angles(port, baud, angles)
@@ -49,7 +64,11 @@ def main():
         change_imu_usage(port, baud, use_imus)
     elif baseline_fname:
         logString("Creating baseline")
-        set_baseline(baseline_fname, args['use_legacy_sign_convention'], verbose)
+        set_baseline( \
+            baseline_fname, \
+            args['use_legacy_sign_convention'], \
+            verbose \
+        )
     elif record_mode:
         logString("Starting recording")
         record(port, baud, verbose)

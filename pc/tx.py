@@ -233,7 +233,8 @@ def send_sine_wave(port, baud, params, servo, verbose):
         else:
             logString("Serial exception")
 
-def playback(port, baud, fname, loop, use_legacy_sign_convention, verbose):
+def playback(port, baud, fname, loop, use_legacy_sign_convention, \
+    use_time_stamps, verbose):
     '''
     Initiates playback mode
     --------
@@ -250,12 +251,20 @@ def playback(port, baud, fname, loop, use_legacy_sign_convention, verbose):
             If True, transforms the data set from the old acceleration sign
             convention to the new one. Meant for data sets recorded prior to
             July 2019
+        use_time_stamps : bool
+            See analyze in analyze.py
         verbose : bool
             Prints additional messages if True
     '''
     fname = os.path.join(get_data_dir(), fname)
     logString("Loading data file " + fname)
-    imu_data, num_samples = load_data_from_file(fname, use_calibration=True, use_legacy_sign_convention=use_legacy_sign_convention)
+    imu_data, num_samples, time_stamps = load_data_from_file(fname, use_calibration=True, use_legacy_sign_convention=use_legacy_sign_convention)
+    t, imu_data, num_samples = make_time_series( \
+        imu_data, \
+        num_samples, \
+        time_stamps, \
+        use_time_stamps \
+    )
     angles = get_angles(imu_data, num_samples)
     
     logString(list_ports())
