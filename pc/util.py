@@ -673,7 +673,7 @@ def make_time_series(imu_data, num_samples, time_stamps, use_time_stamps):
                 delta_t.microseconds / (1000.0 * (1000.0 / SAMPLE_RATE)) \
             ) + 1 \
         )
-        t = np.linspace(0, num_time_slots, num=num_time_slots, endpoint=False)
+        t = np.linspace(0, num_time_slots / SAMPLE_RATE, num=num_time_slots, endpoint=False)
         # Now we need to make a new array to hold IMU info. This array will
         # contain perfect 10 ms spacing between samples. The IMU info will need
         # to be copied into the closest unoccupied slot, and then we'll need to
