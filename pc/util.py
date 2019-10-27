@@ -101,7 +101,9 @@ def parse_args():
     parser.add_argument(
         '--plot_slice',
         help='(analyze option) Plots the data between two specific times '
-             ' Arguments: start time, end time. Example: --plot_slice=10,20',
+             ' Arguments: start time, end time. Example: --plot_slice=10,20. '
+             ' Note that start time and end time are relative to the beginning '
+             ' of the recording',
         default=''
     )
     
@@ -196,6 +198,14 @@ def parse_args():
         help='Enables IMU sensing on MCU if True, disables it if False',
         type=str2bool
     )
+
+    parser.add_argument(
+        '--file_slice',
+        help='Creates a copy of the specified data file, but only between the '
+             ' specified start and end times (relative to the beginning of the '
+             ' recording)',
+        default=''
+    )
     
     parser.add_argument(
         '--verbose',
@@ -205,6 +215,24 @@ def parse_args():
     )
 
     return vars(parser.parse_args())
+
+def validate_slice_args(slice_name, slice_args):
+    if not ',' in slice_args:
+        logString("Invalid arguments for --%s. "
+            "Example of valid usage: --%s=10,20" % (slice_name, slice_name))
+        quit()
+    t_start, t_end = slice_args.split(',')
+    t_start = float(t_start)
+    t_end = float(t_end)
+    if t_start < 0:
+        logString("--%s start time must be >= 0!" % slice_name)
+        quit()
+    if t_end < 0:
+        logString("--%s end time must be >= 0!" % slice_name)
+        quit()
+    if t_start > t_end:
+        logString("--%s start time must be >= end time!" % slice_name)
+        quit()
 
 CMD_BLINK = 'L'
 CMD_CTRL_DI = '0'
@@ -713,6 +741,20 @@ def make_time_series(imu_data, num_samples, time_stamps, use_time_stamps):
         imu_data = imu_data_ts
         num_samples = num_time_slots
     return t, imu_data, num_samples
+
+def do_file_slice(fname, args):
+    '''
+    Creates a copy of the specified file, but only for the data between the
+    specified start and end times.
+
+    --------
+    Arguments
+        fname : string
+            Name of file to copy (or more precisely, derive a slice from)
+        args : string
+            String containing start time and end time (comma-separated)
+    '''
+    pass # TODO(tyler)
 
 class WaitForMs:
     '''

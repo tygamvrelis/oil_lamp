@@ -23,6 +23,7 @@ def main():
     plot_slice = args['plot_slice']
     use_servos = args['use_servos']
     use_imus = args['use_imus']
+    file_slice = args['file_slice']
     verbose = args['verbose']
     
     # Validate args!
@@ -33,23 +34,12 @@ def main():
                   " Please only choose one of these")
         quit()
     
+    # TODO: validate file_slice
     if plot_slice:
-        if not ',' in plot_slice:
-            logString("Invalid arguments for --plot_slice. "
-                "Example of valid usage: --plot_slice=10,20")
-            quit()
-        t_start, t_end = plot_slice.split(',')
-        t_start = float(t_start)
-        t_end = float(t_end)
-        if t_start < 0:
-            logString("--plot_slice start time must be >= 0!")
-            quit()
-        if t_end < 0:
-            logString("--plot_slice end time must be >= 0!")
-            quit()
-        if t_start > t_end:
-            logString("--plot_slice start time must be >= end time!")
-            quit()
+        validate_slice_args("plot_slice", plot_slice)
+    if file_slice:
+        file_slice_fname, file_slice_args = file_slice.split(",", 1)
+        validate_slice_args("file_slice", args)
     
     # Call requested function
     if analyze_fname:
@@ -84,6 +74,8 @@ def main():
         change_servo_usage(port, baud, use_servos)
     elif use_imus != None:
         change_imu_usage(port, baud, use_imus)
+    elif file_slice:
+        do_file_slice(file_slice_fname, file_slice_args);
     elif baseline_fname:
         logString("Creating baseline")
         set_baseline( \
