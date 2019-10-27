@@ -101,7 +101,9 @@ def parse_args():
     parser.add_argument(
         '--plot_slice',
         help='(analyze option) Plots the data between two specific times '
-             ' Arguments: start time, end time. Example: --plot_slice=10,20',
+             ' Arguments: start time, end time. Example: --plot_slice=10,20. '
+             ' Note that start time and end time are relative to the beginning '
+             ' of the recording',
         default=''
     )
     
@@ -196,6 +198,14 @@ def parse_args():
         help='Enables IMU sensing on MCU if True, disables it if False',
         type=str2bool
     )
+
+    parser.add_argument(
+        '--file_slice',
+        help='Creates a copy of the specified data file, but only between the '
+             ' specified start and end times (relative to the beginning of the '
+             ' recording)',
+        default=''
+    )
     
     parser.add_argument(
         '--verbose',
@@ -205,6 +215,27 @@ def parse_args():
     )
 
     return vars(parser.parse_args())
+
+def validate_slice_args(slice_name, slice_args):
+    if not ',' in slice_args:
+        logString("Invalid arguments for --%s. " % slice_name)
+        if slice_name == "plot_slice":
+            logString("Example of valid usage: --plot_slice=10,20")
+        elif slice_name == "file_slice":
+            logString("Example of valid usage: --file_slice=lamp_data_0.dat,10,20")
+        quit()
+    t_start, t_end = slice_args.split(',')
+    t_start = float(t_start)
+    t_end = float(t_end)
+    if t_start < 0:
+        logString("--%s start time must be >= 0!" % slice_name)
+        quit()
+    if t_end < 0:
+        logString("--%s end time must be >= 0!" % slice_name)
+        quit()
+    if t_start > t_end:
+        logString("--%s start time must be >= end time!" % slice_name)
+        quit()
 
 CMD_BLINK = 'L'
 CMD_CTRL_DI = '0'
@@ -402,7 +433,7 @@ def set_baseline(baseline_fname, use_legacy_sign_convention, verbose):
     '''
     # Load data to use for new baseline. Skip first 100 samples or so in order
     # to reach the steady state filter output
-    imu_data, num_samples = load_data_from_file(baseline_fname, False)
+    imu_data, num_samples, time_stamps = load_data_from_file(baseline_fname, False)
     imu_data = imu_data[:,100:]
     
     # Load existing baseline for the multiplicative factors
@@ -553,7 +584,73 @@ def nan_helper(y):
     """
     return np.isnan(y), lambda z: z.nonzero()[0]
 
-def load_data_from_file(file_name, use_calibration=False, interp_nan=True, use_legacy_sign_convention=False):
+def load_bin_data(file_name):
+    '''
+    Opens the specified file for binary reading and loads contnets into a list
+    '''
+    fname = os.path.join(get_data_dir(), file_name)
+    logString("Attempting to open data " + fname)
+    with open(fname, "rb") as f:
+        bin_data = f.readlines() # Files shouldn't be more than a few Mb max
+    return bin_data
+
+def get_data_start_idx(bin_data):
+    '''
+    Finds the first line containing data. Previous lines may contain a preamble
+    '''
+    idx = -1
+    for i in range(len(bin_data)):
+        if bin_data[i].decode().strip() == "START":
+            idx = i
+            break
+    assert(idx != -1), "Invalid data file...could not find START marker"
+    return idx
+
+def make_datetime_from_timestamp(bin_data_line):
+    '''
+    Given a line from a recording file, make a datetime object out of the
+    timestamp
+    '''
+    if sys.version_info > (3, 0):
+        # Python 3
+        return datetime.strptime( \
+            str(bin_data_line[0:12])[2:-1], '%H:%M:%S.%f' \
+        )
+    else:
+        # Python 2
+        return datetime.strptime( \
+            str(bin_data_line[0:12]), '%H:%M:%S.%f' \
+        )
+
+def perform_newline_adjustment(bin_data):
+    '''
+    Some of the binary data may have the same value as the character code for
+    newline. This will cause a single line of data to be split across
+    (potentially many) list elements when it is read from the file. This
+    function iterates through the binary data list and combines list elements
+    when they are split due to the presence of the newline character (up to an
+    expected max element size)
+    '''
+    too_small = [(line, idx) for idx, line in enumerate(bin_data) if \
+                len(line) != LOGGED_BUF_SIZE]
+    idx_to_del = list()
+    assert(len(too_small) == 0 or len(too_small) > 1), "Invalid number of lines are too small"
+    if len(too_small) > 0:
+        cur_line, cur_ind = too_small.pop(0)
+    while len(too_small) > 0:
+        line, ind = too_small.pop(0)
+        if len(bin_data[cur_ind]) < LOGGED_BUF_SIZE:
+            bin_data[cur_ind] = bin_data[cur_ind] + line
+            idx_to_del.append(ind)
+        else:
+            cur_ind = ind
+    for index in sorted(idx_to_del, reverse=True):
+        del bin_data[index]
+    num_samples = len(bin_data)
+    return bin_data, num_samples
+
+def load_data_from_file(file_name, use_calibration=False, interp_nan=True, \
+    use_legacy_sign_convention=False):
     '''
     Loads data from a file
 
@@ -571,50 +668,21 @@ def load_data_from_file(file_name, use_calibration=False, interp_nan=True, use_l
             convention to the new one. Meant for data sets recorded prior to
             July 2019
     '''
+    bin_data = load_bin_data(file_name)
 
-    fname = os.path.join(get_data_dir(), file_name)
-    logString("Attempting to open data " + fname)
-    with open(fname, "rb") as f:
-        bin_data = f.readlines() # Files shouldn't be more than a few Mb max
-        
     # Find starting index of actual data
-    idx = -1
-    for i in range(len(bin_data)):
-        if bin_data[i].decode().strip() == "START":
-            idx = i
-            break
-    assert(idx != -1), "Invalid data file...could not find START marker"
+    idx = get_data_start_idx(bin_data)
     bin_data = bin_data[idx+1:]
     
     # May need to adjust lines due to data looking like newline character
-    too_small = [(line, idx) for idx, line in enumerate(bin_data) if len(line) != LOGGED_BUF_SIZE]
-    idx_to_del = list()
-    assert(len(too_small) == 0 or len(too_small) > 1), "Invalid number of lines are too small"
-    if len(too_small) > 0:
-        cur_line, cur_ind = too_small.pop(0)
-    while len(too_small) > 0:
-        line, ind = too_small.pop(0)
-        if len(bin_data[cur_ind]) < LOGGED_BUF_SIZE:
-            bin_data[cur_ind] = bin_data[cur_ind] + line
-            idx_to_del.append(ind)
-        else:
-            cur_ind = ind
-    for index in sorted(idx_to_del, reverse=True):
-        del bin_data[index]
-    
-    num_samples = len(bin_data)
+    bin_data, num_samples = perform_newline_adjustment(bin_data)
     
     # Interpret the binary data as floats
     imu_data = np.ndarray(shape=(int(IMU_BUF_SIZE / 4), num_samples))
     time_stamps = list()
     for i in range(num_samples):
         imu_data[:,i] = decode_data(bin_data[i][20:-1])
-        if sys.version_info > (3, 0):
-            # Python 3
-            time_stamps.append(datetime.strptime(str(bin_data[i][0:12])[2:-1], '%H:%M:%S.%f'))
-        else:
-            # Python 2
-            time_stamps.append(datetime.strptime(str(bin_data[i][0:12]), '%H:%M:%S.%f'))
+        time_stamps.append(make_datetime_from_timestamp(bin_data[i]))
     
     # Interpolate NaN, if requested and needed
     if interp_nan:
@@ -713,6 +781,122 @@ def make_time_series(imu_data, num_samples, time_stamps, use_time_stamps):
         imu_data = imu_data_ts
         num_samples = num_time_slots
     return t, imu_data, num_samples
+
+def find_idx_of_closest_timestamp(ts_idx, target_delta, bin_data, guess):
+    '''
+    Finds the index of the data entry whose time stamp is closest to a given
+    target.
+
+    --------
+    Arguments
+        ts : int
+            Index containing start time of the recording
+        target_delta : float
+            Target time stamp to find; expressed in seconds relative to ts
+        bin_data : list
+            Binary data to search
+        guess : float
+            Initial guess for desired index (starting point for our search).
+            This does not impact correctness, but it can drastically reduce the
+            time spent searching
+    '''
+    bin_data_len = len(bin_data)
+    if guess > bin_data_len - 1:
+        guess = bin_data_len - 1
+    if guess < ts_idx:
+        guess = ts_idx
+    last_idx = guess
+    next_idx = guess
+    ts = make_datetime_from_timestamp(bin_data[ts_idx])
+    while 1:
+        assert(next_idx >= ts_idx and next_idx <= bin_data_len - 1)
+        dt = target_delta - \
+            (make_datetime_from_timestamp(bin_data[next_idx]) - ts).total_seconds()
+        if dt > 0:
+            next_idx += 1
+            if next_idx > bin_data_len - 1:
+                next_idx = bin_data_len - 1
+            if next_idx == last_idx:
+                # Converged
+                err_next = target_delta - \
+                    (make_datetime_from_timestamp(bin_data[next_idx]) - ts).total_seconds()
+                err_prev = target_delta - \
+                    (make_datetime_from_timestamp(bin_data[next_idx-1]) - ts).total_seconds()
+                return next_idx if err_next < err_prev else next_idx - 1
+            last_idx = next_idx - 1
+        elif dt < 0:
+            next_idx -= 1
+            if next_idx < ts_idx:
+                next_idx = ts_idx
+            if next_idx == last_idx:
+                # Converged
+                err_next = target_delta - \
+                    (make_datetime_from_timestamp(bin_data[next_idx]) - ts).total_seconds()
+                err_prev = target_delta - \
+                    (make_datetime_from_timestamp(bin_data[next_idx+1]) - ts).total_seconds()
+                return next_idx if err_next < err_prev else next_idx + 1
+            last_idx = next_idx + 1
+        else:
+            # Exactly equal. Likely to happen if target is 0
+            return next_idx
+
+def do_file_slice(fname, args):
+    '''
+    Creates a copy of the specified file, but only for the data between the
+    specified start and end times.
+
+    --------
+    Arguments
+        fname : string
+            Name of file to copy (or more precisely, derive a slice from)
+        args : string
+            String containing start time and end time (comma-separated)
+    '''
+    # Load data and compute start and end times
+    bin_data = load_bin_data(fname)
+    idx = get_data_start_idx(bin_data)
+    bin_data[idx+1:], num_samples = perform_newline_adjustment(bin_data[idx+1:])
+    ts = make_datetime_from_timestamp(bin_data[idx+1])
+    tf = make_datetime_from_timestamp(bin_data[-1])
+    delta_t = tf - ts # Total elapsed time
+    SAMPLE_RATE = get_sample_rate()
+    num_time_slots = int( \
+        np.ceil( \
+            SAMPLE_RATE * delta_t.seconds + \
+            delta_t.microseconds / (1000.0 * (1000.0 / SAMPLE_RATE)) \
+        ) + 1 \
+    )
+    delta_t_sec = np.round(delta_t.seconds + delta_t.microseconds / 1e6, 2)
+
+    # Bounds check!
+    t_start, t_end = args.split(',')
+    t_start = np.round(float(t_start), 2)
+    t_end = np.round(float(t_end), 2)
+    if t_end > delta_t_sec:
+        logString( \
+            "--file_slice end time exceeds end time of data ({0})".format(delta_t_sec) \
+        )
+        quit()
+    
+    # Iterate through file to find start and end indices. Start with an initial
+    # guess
+    start_idx_guess = idx + int(np.round(t_start * num_samples / delta_t_sec))
+    end_idx_guess = idx + int(np.round(t_end * num_samples / delta_t_sec))
+    start_idx = find_idx_of_closest_timestamp(idx+1, t_start, bin_data, start_idx_guess)
+    end_idx = find_idx_of_closest_timestamp(idx+1, t_end, bin_data, end_idx_guess)
+
+    # Make name based on split times
+    fname_base, fname_ext = fname.split(".")
+    fname_new = fname_base + "_slice%0.2fto%0.2f" % (t_start, t_end)
+    fname_new += "." + fname_ext
+    fname_new = os.path.join(get_data_dir(), fname_new)
+    # Write to disk
+    with open(fname_new, "wb") as f:
+        for line in bin_data[0:idx+1]:
+            f.write(line) # Preamble
+        for line in bin_data[start_idx:end_idx+1]:
+            f.write(line) # Sliced data
+    logString("Saved split data to {0}".format(fname_new))
 
 class WaitForMs:
     '''
