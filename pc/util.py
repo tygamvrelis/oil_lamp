@@ -137,6 +137,7 @@ def parse_args():
              ' stamps (true time) to construct the time series, or to blindly '
              ' trust sampling rate * number of samples'
              ' Default: True',
+        type=str2bool,
         default=True
     )
     
