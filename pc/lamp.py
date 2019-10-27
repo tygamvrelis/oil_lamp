@@ -39,7 +39,7 @@ def main():
         validate_slice_args("plot_slice", plot_slice)
     if file_slice:
         file_slice_fname, file_slice_args = file_slice.split(",", 1)
-        validate_slice_args("file_slice", args)
+        validate_slice_args("file_slice", file_slice_args)
     
     # Call requested function
     if analyze_fname:
