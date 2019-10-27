@@ -106,7 +106,8 @@ def get_angles(raw_imu_data, num_samples):
         )
     return angles
 
-def analyze(fname, imu_to_plot, estimate, use_calibration, use_legacy_sign_convention):
+def analyze(fname, imu_to_plot, estimate, use_calibration, \
+    use_legacy_sign_convention, use_time_stamps):
     '''
     Visualizes logged data
     --------
@@ -124,8 +125,15 @@ def analyze(fname, imu_to_plot, estimate, use_calibration, use_legacy_sign_conve
             that the IMUs are mounted at angles relative to the lamp and base
         use_legacy_sign_convention : bool
             If True, transforms the data set from the old acceleration sign
-            convention to the new one. Meant for data sets recorded prior to
-            July 2019
+            convention to the new one. Meant for data sets recorded on MCU
+            firmware older than July 2019
+        use_time_stamps : bool
+            If True, uses the time stamps in the data log to construct the time
+            series. Assuming the clock on the computer doing the recording is
+            trustworthy, this should be very robust. Missing entries are
+            accounted for. Otherwise, the time series is constructed based on
+            sampling rate * number of samples, and has no connection to "true
+            time"
     '''
     make_data_dir()
     if fname == "latest":
@@ -133,11 +141,17 @@ def analyze(fname, imu_to_plot, estimate, use_calibration, use_legacy_sign_conve
         files = glob.glob(glob_str)
         fname = max(files, key=os.path.getctime)
 
-    SAMPLE_RATE = 100.0 # Hz
-    imu_data, num_samples = load_data_from_file(fname, use_calibration=use_calibration, use_legacy_sign_convention=use_legacy_sign_convention)
-    # TODO (tyler): consider generating this time array from the time data that
-    # TODO is logged
-    t = np.linspace(0, num_samples / SAMPLE_RATE, num=num_samples, endpoint=False)
+    imu_data, num_samples, time_stamps = load_data_from_file( \
+        fname, \
+        use_calibration=use_calibration, \
+        use_legacy_sign_convention=use_legacy_sign_convention \
+    )
+    t, imu_data, num_samples = make_time_series( \
+        imu_data, \
+        num_samples, \
+        time_stamps, \
+        use_time_stamps \
+    )
 
     fig, ax = plt.subplots()
     size = 2
