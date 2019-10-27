@@ -635,6 +635,9 @@ def load_data_from_file(file_name, use_calibration=False, interp_nan=True, use_l
     
     return imu_data, num_samples, time_stamps
 
+def get_sample_rate():
+    return 100.0 # Hz
+
 def make_time_series(imu_data, num_samples, time_stamps, use_time_stamps):
     '''
     Constructs a time series from the given IMU data. Can construct based on
@@ -664,7 +667,7 @@ def make_time_series(imu_data, num_samples, time_stamps, use_time_stamps):
             Updated IMU data (e.g. may contain interpolated points)
         
     '''
-    SAMPLE_RATE = 100.0 # Hz
+    SAMPLE_RATE = get_sample_rate();
     if not use_time_stamps:
         # Use sample rate as source of truth for timing info
         t = np.linspace(0, num_samples / SAMPLE_RATE, num=num_samples, endpoint=False)

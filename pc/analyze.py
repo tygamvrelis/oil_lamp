@@ -158,8 +158,8 @@ def analyze(fname, imu_to_plot, estimate, use_calibration, \
 
     if plot_slice:
         t_start, t_end = plot_slice.split(',')
-        t_start = float(t_start)
-        t_end = float(t_end)
+        t_start = np.round(float(t_start), 2)
+        t_end = np.round(float(t_end), 2)
         # Bounds check!
         if t_end > t[-1]:
             logString( \
@@ -211,14 +211,14 @@ def analyze(fname, imu_to_plot, estimate, use_calibration, \
         
         fig_name = "raw_" + imu_to_plot + "_"
         fig_name += os.path.splitext(os.path.basename(fname))[0]
+        if plot_slice:
+            fig_name += "_from%.2fto%.2f" % (t_start, t_end)
         fig_name += '.png'
         fig_name = os.path.join(get_data_dir(), fig_name)
         plt.savefig(fig_name)
         logString("Saved fig to {0}".format(fig_name))
         plt.close();
     else:
-        # TODO: (Tyler) Only do both base and lamp if arg == "both" (i.e. 
-        # TODO:         optimize cases where analyzing individual IMUs)
         if estimate == "ind_angles":
             # Plot pitch and roll separately for each IMU
             if imu_to_plot == "base" or imu_to_plot == "both":
@@ -230,7 +230,8 @@ def analyze(fname, imu_to_plot, estimate, use_calibration, \
             fig_name = estimate + "_" + imu_to_plot + "_imu_"
         else:
             # Combine the pitch and roll from each IMU into a single value for each
-            angles[OUTER:INNER+1,:] = angles[BASE_OUTER:BASE_INNER+1,:] + angles[LAMP_OUTER:LAMP_INNER+1,:]
+            angles[OUTER:INNER+1,:] = angles[BASE_OUTER:BASE_INNER+1,:] + \
+                                      angles[LAMP_OUTER:LAMP_INNER+1,:]
             ax.plot(t, angles[OUTER], c="blue",  label="Outer gimbal")
             ax.plot(t, angles[INNER], c="red",   label="Inner gimbal")
             fig_name = estimate + "_"
@@ -241,6 +242,8 @@ def analyze(fname, imu_to_plot, estimate, use_calibration, \
         plt.ylabel('Angle ($^\circ$)')
 
         fig_name += os.path.splitext(os.path.basename(fname))[0]
+        if plot_slice:
+            fig_name += "_from%.2fto%.2f" % (t_start, t_end)
         if use_calibration:
             fig_name += "_calibrated"
         fig_name += '.png'
