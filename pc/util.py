@@ -433,7 +433,7 @@ def set_baseline(baseline_fname, use_legacy_sign_convention, verbose):
     '''
     # Load data to use for new baseline. Skip first 100 samples or so in order
     # to reach the steady state filter output
-    imu_data, num_samples = load_data_from_file(baseline_fname, False)
+    imu_data, num_samples, time_stamps = load_data_from_file(baseline_fname, False)
     imu_data = imu_data[:,100:]
     
     # Load existing baseline for the multiplicative factors
@@ -782,15 +782,15 @@ def make_time_series(imu_data, num_samples, time_stamps, use_time_stamps):
         num_samples = num_time_slots
     return t, imu_data, num_samples
 
-def find_idx_of_closest_timestamp(ts, target_delta, bin_data, guess):
+def find_idx_of_closest_timestamp(ts_idx, target_delta, bin_data, guess):
     '''
     Finds the index of the data entry whose time stamp is closest to a given
     target.
 
     --------
     Arguments
-        ts : datetime
-            Start time of the recording
+        ts : int
+            Index containing start time of the recording
         target_delta : float
             Target time stamp to find; expressed in seconds relative to ts
         bin_data : list
@@ -800,15 +800,22 @@ def find_idx_of_closest_timestamp(ts, target_delta, bin_data, guess):
             This does not impact correctness, but it can drastically reduce the
             time spent searching
     '''
-    done = False
+    bin_data_len = len(bin_data)
+    if guess > bin_data_len - 1:
+        guess = bin_data_len - 1
+    if guess < ts_idx:
+        guess = ts_idx
     last_idx = guess
     next_idx = guess
-    bin_data_len = len(bin_data)
-    while not done:
+    ts = make_datetime_from_timestamp(bin_data[ts_idx])
+    while 1:
+        assert(next_idx >= ts_idx and next_idx <= bin_data_len - 1)
         dt = target_delta - \
             (make_datetime_from_timestamp(bin_data[next_idx]) - ts).total_seconds()
         if dt > 0:
             next_idx += 1
+            if next_idx > bin_data_len - 1:
+                next_idx = bin_data_len - 1
             if next_idx == last_idx:
                 # Converged
                 err_next = target_delta - \
@@ -817,8 +824,10 @@ def find_idx_of_closest_timestamp(ts, target_delta, bin_data, guess):
                     (make_datetime_from_timestamp(bin_data[next_idx-1]) - ts).total_seconds()
                 return next_idx if err_next < err_prev else next_idx - 1
             last_idx = next_idx - 1
-        else:
+        elif dt < 0:
             next_idx -= 1
+            if next_idx < ts_idx:
+                next_idx = ts_idx
             if next_idx == last_idx:
                 # Converged
                 err_next = target_delta - \
@@ -827,7 +836,9 @@ def find_idx_of_closest_timestamp(ts, target_delta, bin_data, guess):
                     (make_datetime_from_timestamp(bin_data[next_idx+1]) - ts).total_seconds()
                 return next_idx if err_next < err_prev else next_idx + 1
             last_idx = next_idx + 1
-        assert(next_idx >= 0 and next_idx < bin_data_len)
+        else:
+            # Exactly equal. Likely to happen if target is 0
+            return next_idx
 
 def do_file_slice(fname, args):
     '''
@@ -863,7 +874,7 @@ def do_file_slice(fname, args):
     t_end = np.round(float(t_end), 2)
     if t_end > delta_t_sec:
         logString( \
-            "--file_slice end time exceeds end time of data ({0})".format(te) \
+            "--file_slice end time exceeds end time of data ({0})".format(delta_t_sec) \
         )
         quit()
     
@@ -871,8 +882,8 @@ def do_file_slice(fname, args):
     # guess
     start_idx_guess = idx + int(np.round(t_start * num_samples / delta_t_sec))
     end_idx_guess = idx + int(np.round(t_end * num_samples / delta_t_sec))
-    start_idx = find_idx_of_closest_timestamp(ts, t_start, bin_data, start_idx_guess)
-    end_idx = find_idx_of_closest_timestamp(ts, t_end, bin_data, end_idx_guess)
+    start_idx = find_idx_of_closest_timestamp(idx+1, t_start, bin_data, start_idx_guess)
+    end_idx = find_idx_of_closest_timestamp(idx+1, t_end, bin_data, end_idx_guess)
 
     # Make name based on split times
     fname_base, fname_ext = fname.split(".")
