@@ -97,6 +97,12 @@ def parse_args():
              ' Default: none',
         default='none'
     )
+
+    parser.add_argument(
+        '--plot_slice',
+        help='(analyze option) Plots the data between two specific times',
+        default=''
+    )
     
     parser.add_argument(
         '--set_baseline',

@@ -107,7 +107,7 @@ def get_angles(raw_imu_data, num_samples):
     return angles
 
 def analyze(fname, imu_to_plot, estimate, use_calibration, \
-    use_legacy_sign_convention, use_time_stamps):
+    use_legacy_sign_convention, use_time_stamps, plot_slice):
     '''
     Visualizes logged data
     --------
@@ -134,6 +134,8 @@ def analyze(fname, imu_to_plot, estimate, use_calibration, \
             accounted for. Otherwise, the time series is constructed based on
             sampling rate * number of samples, and has no connection to "true
             time"
+        plot_slice : string
+            String containing start time and end time to plot between
     '''
     make_data_dir()
     if fname == "latest":
@@ -152,6 +154,10 @@ def analyze(fname, imu_to_plot, estimate, use_calibration, \
         time_stamps, \
         use_time_stamps \
     )
+
+    if plot_slice:
+        t_start, t_end = plot_slice.split(',')
+        print(t_start, t_end)
 
     fig, ax = plt.subplots()
     size = 2

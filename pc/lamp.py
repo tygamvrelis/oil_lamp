@@ -20,6 +20,7 @@ def main():
     baseline_fname = args['set_baseline']
     angles = args['set_angles']
     sine_params = args['sine']
+    plot_slice = args['plot_slice']
     use_servos = args['use_servos']
     use_imus = args['use_imus']
     verbose = args['verbose']
@@ -31,6 +32,12 @@ def main():
                   " Please only choose one of these")
         quit()
     
+    if plot_slice:
+        if not ',' in plot_slice:
+            logString("Invalid arguments for --plot_slice. "
+                "Example of valid usage: --plot_slice=10,20")
+            quit()
+    
     if analyze_fname:
         logString("Starting analysis")
         analyze( \
@@ -39,7 +46,8 @@ def main():
             args['estimate'], \
             args['use_calibration'], \
             args['use_legacy_sign_convention'], \
-            args['use_time_stamps'] \
+            args['use_time_stamps'], \
+            plot_slice \
         )
     elif playback_fname:
         logString("Starting playback")
