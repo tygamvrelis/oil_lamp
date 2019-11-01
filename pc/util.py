@@ -287,6 +287,14 @@ def disable_imus(ser):
     logString("Disabling IMUs")
     ser.write(CMD_SENS_DI.encode())
 
+# For angles in Analyze
+OUTER = 0
+INNER = 1
+BASE_OUTER = 0
+BASE_INNER = 1
+LAMP_OUTER = 2
+LAMP_INNER = 3
+# For raw data bytes
 IMU_BUF_SIZE = 2*6*4 # 2 IMUs * 6 floats
 BUF_SIZE = IMU_BUF_SIZE + 1 # 1 status byte
 LOGGED_BUF_SIZE = BUF_SIZE + 20 # 20 bytes of plaintext for time + status

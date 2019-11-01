@@ -5,6 +5,7 @@
 import numpy as np
 import glob
 from util import *
+import animate as anim
 try:
     import matplotlib.pyplot as plt
 except:
@@ -72,12 +73,6 @@ class cFilt:
         '''
         return self.__theta_p, self.__theta_r
 
-OUTER = 0
-INNER = 1
-BASE_OUTER = 0
-BASE_INNER = 1
-LAMP_OUTER = 2
-LAMP_INNER = 3
 def get_angles(raw_imu_data, num_samples):
     '''
     Computes a time series of angles given a time series of raw IMU data
@@ -173,6 +168,15 @@ def analyze(fname, imu_to_plot, estimate, use_calibration, \
         imu_data = imu_data[:,start_idx:end_idx+1]
         angles = angles[:,start_idx:end_idx+1]
         num_samples = end_idx - start_idx + 1
+    
+    # TODO: make this accessible from command-line (either as its own command
+    # or an analyze option)
+    # TODO: how could we choose between comb and ind angles in a simple way?
+    animate = True
+    if animate:
+        aa = anim.Animate(t, angles)
+        aa.do_animate(LAMP_OUTER)
+        aa.do_animate(BASE_OUTER)
 
     fig, ax = plt.subplots()
     size = 2
