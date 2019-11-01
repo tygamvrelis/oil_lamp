@@ -13,8 +13,8 @@ class Animate:
         self.width = width
         self.height = height
         # Hardcoded video & pendulum settings
-        self.offset_x = width // 2
-        self.offset_y = height // 4
+        self.mid_x = width // 2
+        self.mid_y = height // 2
         self.radius = 25 # Size of the circle at end of pendulum
         SCALE_FACTOR = 400
         self.L = 0.52 * SCALE_FACTOR # Make it look large in the frame
@@ -44,13 +44,13 @@ class Animate:
         video = VideoWriter(fname, fourcc, float(self.FPS), (self.width, self.height))
         for i in range(0, self.__t.shape[0], int(1 / (self.TS * self.FPS))):
             angle = self.__angles[angle_idx, i] * np.pi / 180.0
-            circ_x = self.offset_x + int(self.L * np.sin(angle));
-            circ_y = self.offset_y + int(self.L * np.cos(angle));
+            circ_x = self.mid_x + int(self.L * np.sin(angle));
+            circ_y = self.mid_y // 2 + int(self.L * np.cos(angle));
 
             frame = np.full((self.height, self.width, 3), 65535, dtype=np.uint8) # Fill white
             cv2.line(
                 frame,
-                (self.offset_x, self.offset_y),
+                (self.mid_x, self.mid_y // 2),
                 (circ_x, circ_y),
                 (100,100,100),
                 thickness=10,
@@ -63,6 +63,58 @@ class Animate:
                 -1, 
                 lineType=cv2.LINE_AA
             )
+            video.write(frame)
+        video.release()
+
+    def do_birds_eye_view_animation(self):
+        '''
+        Project motion onto a 2D plane below the lamp
+        '''
+        pass
+    
+    def do_polar_animation(self, imu):
+        '''
+        Animate the value of theta1 and theta2 vs time, as a vector on a 2D
+        plane
+        '''
+        # TODO:tyler
+        # Also, what use cases do we want to support anyway? Individual IMUs?
+        # combined angles? Just one of these? Both?
+        assert(imu == 'base' or imu == 'lamp' or imu == 'both'), "Invalid imu value"
+        fname = './polar_plot' + '_' + imu + '.avi'
+        fname = os.path.join(get_data_dir(), fname) # TODO: fix this so it goes to right subdir
+        fourcc = VideoWriter_fourcc(*'MP42')
+        video = VideoWriter(fname, fourcc, float(self.FPS), (self.width, self.height))
+        MAX_ANGLE = 40.0
+        SCALE_FACTOR = min(self.width, self.height) / 2.0 / MAX_ANGLE
+        for i in range(0, self.__t.shape[0], int(1 / (self.TS * self.FPS))):
+            frame = np.full((self.height, self.width, 3), 65535, dtype=np.uint8) # Fill white
+            if imu == 'base' or imu == 'both':
+                angle_outer = self.__angles[BASE_OUTER, i] * SCALE_FACTOR
+                angle_inner = self.__angles[BASE_INNER, i] * SCALE_FACTOR
+                angle_outer = int(angle_outer)
+                angle_inner = int(angle_inner)
+                cv2.arrowedLine(
+                    frame,
+                    (self.mid_x, self.mid_y),
+                    (angle_outer + self.mid_x, angle_inner + self.mid_y),
+                    (100,0,255),
+                    thickness=3,
+                    line_type=cv2.LINE_AA
+                )
+            if imu == 'lamp' or imu == 'both':
+                angle_outer = self.__angles[LAMP_OUTER, i] * SCALE_FACTOR
+                angle_inner = self.__angles[LAMP_INNER, i] * SCALE_FACTOR
+                angle_outer = int(angle_outer)
+                angle_inner = int(angle_inner)
+                cv2.arrowedLine(
+                    frame,
+                    (self.mid_x, self.mid_y),
+                    (angle_outer + self.mid_x, angle_inner + self.mid_y),
+                    (100,100,100),
+                    thickness=3,
+                    line_type=cv2.LINE_AA
+                )
             video.write(frame)
         video.release()
 

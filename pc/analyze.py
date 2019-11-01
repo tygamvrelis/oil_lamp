@@ -175,8 +175,9 @@ def analyze(fname, imu_to_plot, estimate, use_calibration, \
     animate = True
     if animate:
         aa = anim.Animate(t, angles)
-        aa.do_animate(LAMP_OUTER)
-        aa.do_animate(BASE_OUTER)
+        aa.do_polar_animation(imu_to_plot)
+        #aa.do_animate(LAMP_OUTER)
+        #aa.do_animate(BASE_OUTER)
 
     fig, ax = plt.subplots()
     size = 2
