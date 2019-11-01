@@ -39,7 +39,7 @@ class Animate:
         elif angle_idx == LAMP_INNER:
             fname += '_lamp_inner'
         fname += '.avi'
-        fname = os.join(get_data_dir(), fname)
+        fname = os.path.join(get_data_dir(), fname) # TODO: fix this so it goes to right subdir
         fourcc = VideoWriter_fourcc(*'MP42')
         video = VideoWriter(fname, fourcc, float(self.FPS), (self.width, self.height))
         for i in range(0, self.__t.shape[0], int(1 / (self.TS * self.FPS))):
@@ -48,8 +48,21 @@ class Animate:
             circ_y = self.offset_y + int(self.L * np.cos(angle));
 
             frame = np.full((self.height, self.width, 3), 65535, dtype=np.uint8) # Fill white
-            cv2.line(frame, (self.offset_x, self.offset_y), (circ_x, circ_y), (100,100,100), 10)
-            cv2.circle(frame, (circ_x, circ_y), self.radius, (0, 0, 0), -1)
+            cv2.line(
+                frame,
+                (self.offset_x, self.offset_y),
+                (circ_x, circ_y),
+                (100,100,100),
+                thickness=10,
+                lineType=cv2.LINE_AA
+            )
+            cv2.circle(
+                frame,
+                (circ_x, circ_y),
+                self.radius, (0, 0, 0),
+                -1, 
+                lineType=cv2.LINE_AA
+            )
             video.write(frame)
         video.release()
 
