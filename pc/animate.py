@@ -85,34 +85,113 @@ class Animate:
         fname = os.path.join(get_data_dir(), fname) # TODO: fix this so it goes to right subdir
         fourcc = VideoWriter_fourcc(*'MP42')
         video = VideoWriter(fname, fourcc, float(self.FPS), (self.width, self.height))
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        LAMP_COLOR = (100, 100, 100)
+        BASE_COLOR = (100, 0, 255)
+        BLACK = (0, 0, 0)
         MAX_ANGLE = 40.0
         SCALE_FACTOR = min(self.width, self.height) / 2.0 / MAX_ANGLE
         for i in range(0, self.__t.shape[0], int(1 / (self.TS * self.FPS))):
             frame = np.full((self.height, self.width, 3), 65535, dtype=np.uint8) # Fill white
+            # X-axis (outer)
+            cv2.arrowedLine(
+                frame,
+                (0, self.mid_y),
+                (int(self.width * 0.95), self.mid_y),
+                BLACK,
+                thickness=1,
+                line_type=cv2.LINE_AA,
+                tipLength=0.01
+            )
+            cv2.putText(
+                frame,
+                'Outer (deg)',
+                (self.width - 100, self.mid_y + 30),
+                font,
+                0.5,
+                BLACK,
+                1,
+                cv2.LINE_AA
+            )
+            # Y-axis (inner)
+            cv2.arrowedLine(
+                frame,
+                (self.mid_x, self.height),
+                (self.mid_x, int(self.height * 0.05)),
+                BLACK,
+                thickness=1,
+                line_type=cv2.LINE_AA,
+                tipLength=0.01
+            )
+            cv2.putText(
+                frame,
+                'Inner (deg)',
+                (self.mid_x + 10, 30),
+                font,
+                0.5,
+                BLACK,
+                1,
+                cv2.LINE_AA
+            )
+            # Color legend
             if imu == 'base' or imu == 'both':
-                angle_outer = self.__angles[BASE_OUTER, i] * SCALE_FACTOR
-                angle_inner = self.__angles[BASE_INNER, i] * SCALE_FACTOR
-                angle_outer = int(angle_outer)
-                angle_inner = int(angle_inner)
+                cv2.putText(
+                    frame,
+                    'Base',
+                    (10,30),
+                    font,
+                    1,
+                    BASE_COLOR,
+                    2,
+                    cv2.LINE_AA
+                )
+            if imu == 'lamp' or imu == 'both':
+                if imu == 'both':
+                    start_y = 60
+                else:
+                    start_y = 30
+                cv2.putText(
+                    frame,
+                    'Lamp',
+                    (10,start_y),
+                    font,
+                    1,
+                    LAMP_COLOR,
+                    2,
+                    cv2.LINE_AA
+                )
+            if imu == 'base' or imu == 'both':
+                base_angle_outer = self.__angles[BASE_OUTER, i] * SCALE_FACTOR
+                base_angle_inner = self.__angles[BASE_INNER, i] * SCALE_FACTOR
+                base_angle_outer = int(base_angle_outer)
+                base_angle_inner = int(base_angle_inner)
+                base_end_x = base_angle_outer + self.mid_x
+                base_end_y = base_angle_inner + self.mid_y
                 cv2.arrowedLine(
                     frame,
                     (self.mid_x, self.mid_y),
-                    (angle_outer + self.mid_x, angle_inner + self.mid_y),
-                    (100,0,255),
-                    thickness=3,
+                    (base_end_x, base_end_y),
+                    BASE_COLOR,
+                    thickness=2,
                     line_type=cv2.LINE_AA
                 )
             if imu == 'lamp' or imu == 'both':
-                angle_outer = self.__angles[LAMP_OUTER, i] * SCALE_FACTOR
-                angle_inner = self.__angles[LAMP_INNER, i] * SCALE_FACTOR
-                angle_outer = int(angle_outer)
-                angle_inner = int(angle_inner)
+                lamp_angle_outer = self.__angles[LAMP_OUTER, i] * SCALE_FACTOR
+                lamp_angle_inner = self.__angles[LAMP_INNER, i] * SCALE_FACTOR
+                lamp_angle_outer = int(lamp_angle_outer)
+                lamp_angle_inner = int(lamp_angle_inner)
+                if imu == 'both':
+                    start_x = base_end_x
+                    start_y = base_end_y
+                else:
+                    start_x = self.mid_x
+                    start_y = self.mid_y
                 cv2.arrowedLine(
                     frame,
-                    (self.mid_x, self.mid_y),
-                    (angle_outer + self.mid_x, angle_inner + self.mid_y),
-                    (100,100,100),
-                    thickness=3,
+                    (start_x, start_y),
+                    (start_x + lamp_angle_outer, start_y + lamp_angle_inner),
+                    LAMP_COLOR,
+                    thickness=2,
                     line_type=cv2.LINE_AA
                 )
             video.write(frame)
