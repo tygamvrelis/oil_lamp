@@ -5,6 +5,12 @@ import numpy as np
 from cv2 import VideoWriter, VideoWriter_fourcc
 from util import *
 
+font = cv2.FONT_HERSHEY_SIMPLEX
+LAMP_COLOR = (100, 100, 100)
+BASE_COLOR = (100, 0, 255)
+BLACK = (0, 0, 0)
+MAX_ANGLE = 40.0
+
 class Animate:
     def __init__(self, t, angles, FPS=60, width=640, height=480):
         self.__t = t
@@ -71,6 +77,75 @@ class Animate:
         Project motion onto a 2D plane below the lamp
         '''
         pass
+
+    def plot_axes(self, frame, scale):
+        '''
+        Adds axis lines and labels to frame
+        '''
+        # Add +/- labels for some points
+        for i in range (-30, 40, 10):
+            if i == 0:
+                continue
+            outer = int(i * scale) + self.mid_x
+            inner = -1 * int(i * scale) + self.mid_y
+            cv2.line(
+                frame, (outer, 0), (outer, self.height),
+                (211,211,211), thickness=1, lineType=cv2.LINE_AA
+            )
+            cv2.line(
+                frame, (0, inner), (self.width, inner),
+                (211,211,211), thickness=1, lineType=cv2.LINE_AA
+            )
+            cv2.putText(
+                frame, str(i),
+                (outer, self.mid_y + 15),
+                font, 0.5, BLACK, 1, cv2.LINE_AA
+            )
+            cv2.putText(
+                frame, str(i),
+                (self.mid_x + 10, inner),
+                font, 0.5, BLACK, 1, cv2.LINE_AA
+            )
+        # X-axis (outer)
+        cv2.arrowedLine(
+            frame,
+            (0, self.mid_y),
+            (int(self.width * 0.95), self.mid_y),
+            BLACK,
+            thickness=1,
+            line_type=cv2.LINE_AA,
+            tipLength=0.01
+        )
+        cv2.putText(
+            frame,
+            'Outer (deg)',
+            (self.width - 100, self.mid_y + 30),
+            font,
+            0.5,
+            BLACK,
+            1,
+            cv2.LINE_AA
+        )
+        # Y-axis (inner)
+        cv2.arrowedLine(
+            frame,
+            (self.mid_x, self.height),
+            (self.mid_x, int(self.height * 0.05)),
+            BLACK,
+            thickness=1,
+            line_type=cv2.LINE_AA,
+            tipLength=0.01
+        )
+        cv2.putText(
+            frame,
+            'Inner (deg)',
+            (self.mid_x + 10, 30),
+            font,
+            0.5,
+            BLACK,
+            1,
+            cv2.LINE_AA
+        )
     
     def do_polar_animation(self, imu):
         '''
@@ -85,54 +160,10 @@ class Animate:
         fname = os.path.join(get_data_dir(), fname) # TODO: fix this so it goes to right subdir
         fourcc = VideoWriter_fourcc(*'MP42')
         video = VideoWriter(fname, fourcc, float(self.FPS), (self.width, self.height))
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        LAMP_COLOR = (100, 100, 100)
-        BASE_COLOR = (100, 0, 255)
-        BLACK = (0, 0, 0)
-        MAX_ANGLE = 40.0
         SCALE_FACTOR = min(self.width, self.height) / 2.0 / MAX_ANGLE
         for i in range(0, self.__t.shape[0], int(1 / (self.TS * self.FPS))):
             frame = np.full((self.height, self.width, 3), 65535, dtype=np.uint8) # Fill white
-            # X-axis (outer)
-            cv2.arrowedLine(
-                frame,
-                (0, self.mid_y),
-                (int(self.width * 0.95), self.mid_y),
-                BLACK,
-                thickness=1,
-                line_type=cv2.LINE_AA,
-                tipLength=0.01
-            )
-            cv2.putText(
-                frame,
-                'Outer (deg)',
-                (self.width - 100, self.mid_y + 30),
-                font,
-                0.5,
-                BLACK,
-                1,
-                cv2.LINE_AA
-            )
-            # Y-axis (inner)
-            cv2.arrowedLine(
-                frame,
-                (self.mid_x, self.height),
-                (self.mid_x, int(self.height * 0.05)),
-                BLACK,
-                thickness=1,
-                line_type=cv2.LINE_AA,
-                tipLength=0.01
-            )
-            cv2.putText(
-                frame,
-                'Inner (deg)',
-                (self.mid_x + 10, 30),
-                font,
-                0.5,
-                BLACK,
-                1,
-                cv2.LINE_AA
-            )
+            self.plot_axes(frame, SCALE_FACTOR)
             # Color legend
             if imu == 'base' or imu == 'both':
                 cv2.putText(
@@ -162,7 +193,7 @@ class Animate:
                 )
             if imu == 'base' or imu == 'both':
                 base_angle_outer = self.__angles[BASE_OUTER, i] * SCALE_FACTOR
-                base_angle_inner = self.__angles[BASE_INNER, i] * SCALE_FACTOR
+                base_angle_inner = -1 * self.__angles[BASE_INNER, i] * SCALE_FACTOR
                 base_angle_outer = int(base_angle_outer)
                 base_angle_inner = int(base_angle_inner)
                 base_end_x = base_angle_outer + self.mid_x
@@ -177,7 +208,7 @@ class Animate:
                 )
             if imu == 'lamp' or imu == 'both':
                 lamp_angle_outer = self.__angles[LAMP_OUTER, i] * SCALE_FACTOR
-                lamp_angle_inner = self.__angles[LAMP_INNER, i] * SCALE_FACTOR
+                lamp_angle_inner = -1 * self.__angles[LAMP_INNER, i] * SCALE_FACTOR
                 lamp_angle_outer = int(lamp_angle_outer)
                 lamp_angle_inner = int(lamp_angle_inner)
                 if imu == 'both':
