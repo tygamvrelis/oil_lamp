@@ -1,3 +1,6 @@
+# Animation utilities
+# Author: Tyler
+# Date: November 3, 2019
 
 import os
 import cv2
@@ -10,16 +13,40 @@ LAMP_COLOR = (100, 100, 100)
 BASE_COLOR = (100, 0, 255)
 BLACK = (0, 0, 0)
 GREY = (211, 211, 211)
-MAX_ANGLE = 40.0
+MAX_ANGLE = 40.0 # Used for some scaling
 
 class Animate:
+    '''
+    Animates lamp motion
+    '''
+
     def __init__(self, t, angles, fname, FPS=50, width=640, height=480):
+        '''
+        Arguments
+        --------
+            t : np.array
+                Array of time values
+            angles : np.array
+                Array of estimated angles
+            fname : str
+                Name of file data was loaded from. Used to generate name of
+                video file for animation
+            FPS : int
+                Number of frames per second in video. For best results, this
+                should divide get_sample_rate(). For example, if the sample
+                rate is 100 (samples/sec), FPS = 25, 50, or 100 should work
+                well. Otherwise the animation will not line up properly in time
+                with the recorded data
+            width : int
+                Width of frame, in pixels
+            height : int
+                Height of frame, in pixels
+        '''
         self.__t = t
         self.__angles = angles
         self.FPS = FPS
         self.width = width
         self.height = height
-        # Hardcoded video & pendulum settings
         self.mid_x = width // 2
         self.mid_y = height // 2
         self.L = 5.2 # Length of pendulum [cm]
@@ -87,6 +114,14 @@ class Animate:
     def add_phase_space_axis_labels(self, frame, scale):
         '''
         Add some axis labels to frame
+
+        Arguments
+        --------
+            frame : np.array
+                Array representing the video frame
+            scale : float
+                Scaling factor applied to all values being plotted so that
+                they fill up the frame
         '''
         # Add +/- labels for some points
         for i in range (-30, 40, 10):
@@ -116,6 +151,24 @@ class Animate:
     def plot_axes(self, frame, xlab, ylab, xlab_offset, ylab_offset):
         '''
         Adds axis lines to frame
+
+        Arguments
+        --------
+            frame : np.array
+                Array representing the video frame
+            xlab : str
+                Label for x-axis
+            ylab : str
+                Label for y-axis
+            xlab_offset : int
+                Offset to apply to xlab, to translate it left and right across
+                the frame. Positive values will move it left, and a value of 0
+                places it at the far right. This may need to be tweaked to get
+                the full xlab string to show on the frame
+            ylab_offset : int
+                Same idea as xlab_offset. A value of 0 places the ylab string
+                at the top of the y-axis, and positive values translate it
+                downward
         '''
         # X-axis (outer)
         cv2.arrowedLine(
@@ -140,7 +193,14 @@ class Animate:
     def do_phase_space_animation(self, imu):
         '''
         Animate the value of theta1 and theta2 vs time, as a vector on a 2D
-        plane
+        plane. Vector magnitudes are measured in degrees
+
+        Arguments
+        --------
+            imu : str
+                Indicates whether the data for the base IMU or the lamp IMU is
+                to be animated, or both. If both, a vector decomposition is
+                shown
         '''
         assert(imu == 'base' or imu == 'lamp' or imu == 'both'), "Invalid imu value"
         fname = 'phase_space' + '_' + imu + '.avi'
@@ -212,13 +272,26 @@ class Animate:
 
     def plot_birds_eye_view_reference_wall(self, frame):
         '''
-        Plots wall upon which base is mounted, for reference
+        Plots wall upon which base is mounted, for directional reference
+
+        Arguments
+        --------
+            frame : np.array
+                Array representing the video frame
         '''
         cv2.line(frame, (10, 0), (10, self.height), BLACK, 20)
 
     def plot_birds_eye_view_axis_labels(self, frame, scale):
         '''
         Add some axis labels to frame
+
+        Arguments
+        --------
+            frame : np.array
+                Array representing the video frame
+            scale : float
+                Scaling factor applied to all values being plotted so that
+                they fill up the frame
         '''
         # Add +/- labels for some points
         for i in range (-30, 40, 10):
@@ -250,12 +323,14 @@ class Animate:
     
     def do_birds_eye_view_animation(self, imu, decomp=False):
         '''
-        Project motion onto a 2D plane below the lamp
+        Project motion onto a 2D plane below the lamp, with distances measured
+        in cm. A red circle is used to represent the position of the lamp.
 
         Arguments
         --------
-            imu : int
-                Index of IMU to plot
+            imu : str
+                Indicates whether the data for the base IMU or the lamp IMU is
+                to be animated, or both
             decomp : bool
                 Shows vector decomposition if true, otherwise only the
                 resultant is shown

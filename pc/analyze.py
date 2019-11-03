@@ -102,7 +102,8 @@ def get_angles(raw_imu_data, num_samples):
     return angles
 
 def analyze(fname, imu_to_plot, estimate, use_calibration, \
-    use_legacy_sign_convention, use_time_stamps, plot_slice):
+    use_legacy_sign_convention, use_time_stamps, plot_slice, \
+    anim_data):
     '''
     Visualizes logged data
     --------
@@ -131,6 +132,9 @@ def analyze(fname, imu_to_plot, estimate, use_calibration, \
             time"
         plot_slice : string
             String containing start time and end time to plot between
+        anim_data : tuple
+            3-tuple containing (1) bool indicating whether or not to animate,
+            (2) animation type, and (3) animation arguments
     '''
     make_data_dir()
     if fname == "latest":
@@ -169,25 +173,28 @@ def analyze(fname, imu_to_plot, estimate, use_calibration, \
         angles = angles[:,start_idx:end_idx+1]
         num_samples = end_idx - start_idx + 1
     
-    # TODO: make this accessible from command-line (either as its own command
-    # or an analyze option)
-    animate = True
-    if animate:
-        pass
-        # aa = anim.Animate(t, angles, fname)
-        # aa.do_phase_space_animation('both')
-        # aa.do_phase_space_animation('lamp')
-        # aa.do_phase_space_animation('base')
-        # aa.do_birds_eye_view_animation('both')
-        # aa.do_birds_eye_view_animation('lamp', True)
-        # aa.do_birds_eye_view_animation('base')
-        # aa.do_birds_eye_view_animation('both', True)
-        # aa.do_birds_eye_view_animation('lamp')
-        # aa.do_birds_eye_view_animation('base', True)
-        # aa.do_pendulum_animation(LAMP_OUTER)
-        # aa.do_pendulum_animation(LAMP_INNER)
-        # aa.do_pendulum_animation(BASE_OUTER)
-        # aa.do_pendulum_animation(BASE_INNER)
+    do_animate, anim_type, anim_args = anim_data
+    if do_animate:
+        aa = anim.Animate(t, angles, fname)
+        if anim_type == 'phase':
+            aa.do_phase_space_animation(imu_to_plot)
+        elif anim_type == 'top_down':
+            do_decomp = anim_args == 'decomp'
+            aa.do_birds_eye_view_animation(imu_to_plot, do_decomp)
+        elif anim_type == 'pendulum':
+            if imu_to_plot == 'lamp' or imu_to_plot == 'both':
+                if anim_args == 'outer' or anim_args == 'both':
+                    aa.do_pendulum_animation(LAMP_OUTER)
+                if anim_args == 'inner' or anim_args == 'both':
+                    aa.do_pendulum_animation(LAMP_INNER)
+            if imu_to_plot == 'base' or imu_to_plot == 'both':
+                if anim_args == 'outer' or anim_args == 'both':
+                    aa.do_pendulum_animation(BASE_OUTER)
+                if anim_args == 'inner' or anim_args == 'both':
+                    aa.do_pendulum_animation(BASE_INNER)
+        else:
+            assert(False), "Animation processing messed up!"
+        return
 
     fig, ax = plt.subplots()
     size = 2
