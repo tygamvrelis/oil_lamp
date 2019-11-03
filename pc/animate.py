@@ -9,10 +9,11 @@ font = cv2.FONT_HERSHEY_SIMPLEX
 LAMP_COLOR = (100, 100, 100)
 BASE_COLOR = (100, 0, 255)
 BLACK = (0, 0, 0)
+GREY = (211, 211, 211)
 MAX_ANGLE = 40.0
 
 class Animate:
-    def __init__(self, t, angles, FPS=60, width=640, height=480):
+    def __init__(self, t, angles, fname, FPS=50, width=640, height=480):
         self.__t = t
         self.__angles = angles
         self.FPS = FPS
@@ -25,6 +26,11 @@ class Animate:
         SCALE_FACTOR = 400
         self.L = 0.52 * SCALE_FACTOR # Make it look large in the frame
         self.TS = 1 / get_sample_rate()
+        self.base_name = os.path.join(
+            get_data_dir(),
+            os.path.dirname(fname)
+        )
+        self.fname = os.path.splitext(os.path.basename(fname))[0]
 
     def do_animate(self, angle_idx):
         '''
@@ -35,7 +41,7 @@ class Animate:
             angle_idx : int
                 Specifies which angles are to be animated (e.g. BASE_OUTER, )
         '''
-        fname = './pendulum'
+        fname = 'pendulum'
         if angle_idx == BASE_OUTER:
             fname += '_base_outer'
         elif angle_idx == BASE_INNER:
@@ -45,7 +51,7 @@ class Animate:
         elif angle_idx == LAMP_INNER:
             fname += '_lamp_inner'
         fname += '.avi'
-        fname = os.path.join(get_data_dir(), fname) # TODO: fix this so it goes to right subdir
+        fname = os.path.join(self.base_name, self.fname + '_' + fname)
         fourcc = VideoWriter_fourcc(*'MP42')
         video = VideoWriter(fname, fourcc, float(self.FPS), (self.width, self.height))
         for i in range(0, self.__t.shape[0], int(1 / (self.TS * self.FPS))):
@@ -54,6 +60,11 @@ class Animate:
             circ_y = self.mid_y // 2 + int(self.L * np.cos(angle));
 
             frame = np.full((self.height, self.width, 3), 65535, dtype=np.uint8) # Fill white
+            cv2.putText(
+                frame, 'Time: %d' % self.__t[i],
+                (10, self.height - 30),
+                font, 0.5, BLACK, 1, cv2.LINE_AA
+            )
             cv2.line(
                 frame,
                 (self.mid_x, self.mid_y // 2),
@@ -78,9 +89,9 @@ class Animate:
         '''
         pass
 
-    def plot_axes(self, frame, scale):
+    def add_polar_axis_labels(self, frame, scale):
         '''
-        Adds axis lines and labels to frame
+        Add some axis labels to frame
         '''
         # Add +/- labels for some points
         for i in range (-30, 40, 10):
@@ -90,11 +101,11 @@ class Animate:
             inner = -1 * int(i * scale) + self.mid_y
             cv2.line(
                 frame, (outer, 0), (outer, self.height),
-                (211,211,211), thickness=1, lineType=cv2.LINE_AA
+                GREY, thickness=1, lineType=cv2.LINE_AA
             )
             cv2.line(
                 frame, (0, inner), (self.width, inner),
-                (211,211,211), thickness=1, lineType=cv2.LINE_AA
+                GREY, thickness=1, lineType=cv2.LINE_AA
             )
             cv2.putText(
                 frame, str(i),
@@ -106,6 +117,11 @@ class Animate:
                 (self.mid_x + 10, inner),
                 font, 0.5, BLACK, 1, cv2.LINE_AA
             )
+
+    def plot_axes(self, frame):
+        '''
+        Adds axis lines to frame
+        '''
         # X-axis (outer)
         cv2.arrowedLine(
             frame,
@@ -156,14 +172,20 @@ class Animate:
         # Also, what use cases do we want to support anyway? Individual IMUs?
         # combined angles? Just one of these? Both?
         assert(imu == 'base' or imu == 'lamp' or imu == 'both'), "Invalid imu value"
-        fname = './polar_plot' + '_' + imu + '.avi'
-        fname = os.path.join(get_data_dir(), fname) # TODO: fix this so it goes to right subdir
+        fname = 'polar_plot' + '_' + imu + '.avi'
+        fname = os.path.join(self.base_name, self.fname + '_' + fname)
         fourcc = VideoWriter_fourcc(*'MP42')
         video = VideoWriter(fname, fourcc, float(self.FPS), (self.width, self.height))
         SCALE_FACTOR = min(self.width, self.height) / 2.0 / MAX_ANGLE
         for i in range(0, self.__t.shape[0], int(1 / (self.TS * self.FPS))):
             frame = np.full((self.height, self.width, 3), 65535, dtype=np.uint8) # Fill white
-            self.plot_axes(frame, SCALE_FACTOR)
+            self.add_polar_axis_labels(frame, SCALE_FACTOR)
+            self.plot_axes(frame)
+            cv2.putText(
+                frame, 'Time: %d' % self.__t[i],
+                (10, self.height - 30),
+                font, 0.5, BLACK, 1, cv2.LINE_AA
+            )
             # Color legend
             if imu == 'base' or imu == 'both':
                 cv2.putText(

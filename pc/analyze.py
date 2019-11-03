@@ -174,7 +174,7 @@ def analyze(fname, imu_to_plot, estimate, use_calibration, \
     # TODO: how could we choose between comb and ind angles in a simple way?
     animate = True
     if animate:
-        aa = anim.Animate(t, angles)
+        aa = anim.Animate(t, angles, fname)
         aa.do_polar_animation(imu_to_plot)
         #aa.do_animate(LAMP_OUTER)
         #aa.do_animate(BASE_OUTER)
@@ -219,7 +219,7 @@ def analyze(fname, imu_to_plot, estimate, use_calibration, \
         if plot_slice:
             fig_name += "_from%.2fto%.2f" % (t_start, t_end)
         fig_name += '.png'
-        fig_name = os.path.join(get_data_dir(), fig_name)
+        fig_name = os.path.join(get_data_dir(), os.path.dirname(fname), fig_name)
         plt.savefig(fig_name)
         logString("Saved fig to {0}".format(fig_name))
         plt.close();
