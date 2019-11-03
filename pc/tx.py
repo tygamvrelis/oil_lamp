@@ -8,7 +8,7 @@ import os
 import struct
 import numpy as np
 from util import *
-from analyze import get_angles, OUTER, INNER, BASE_OUTER, BASE_INNER, LAMP_OUTER, LAMP_INNER
+from analyze import get_angles
 
 def transmit_angles(ser, a_outer, a_inner, dryrun=False):
     '''

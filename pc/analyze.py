@@ -5,6 +5,7 @@
 import numpy as np
 import glob
 from util import *
+import animate as anim
 try:
     import matplotlib.pyplot as plt
 except:
@@ -72,12 +73,6 @@ class cFilt:
         '''
         return self.__theta_p, self.__theta_r
 
-OUTER = 0
-INNER = 1
-BASE_OUTER = 0
-BASE_INNER = 1
-LAMP_OUTER = 2
-LAMP_INNER = 3
 def get_angles(raw_imu_data, num_samples):
     '''
     Computes a time series of angles given a time series of raw IMU data
@@ -107,7 +102,8 @@ def get_angles(raw_imu_data, num_samples):
     return angles
 
 def analyze(fname, imu_to_plot, estimate, use_calibration, \
-    use_legacy_sign_convention, use_time_stamps, plot_slice):
+    use_legacy_sign_convention, use_time_stamps, plot_slice, \
+    anim_data):
     '''
     Visualizes logged data
     --------
@@ -136,6 +132,9 @@ def analyze(fname, imu_to_plot, estimate, use_calibration, \
             time"
         plot_slice : string
             String containing start time and end time to plot between
+        anim_data : tuple
+            3-tuple containing (1) bool indicating whether or not to animate,
+            (2) animation type, and (3) animation arguments
     '''
     make_data_dir()
     if fname == "latest":
@@ -173,6 +172,29 @@ def analyze(fname, imu_to_plot, estimate, use_calibration, \
         imu_data = imu_data[:,start_idx:end_idx+1]
         angles = angles[:,start_idx:end_idx+1]
         num_samples = end_idx - start_idx + 1
+    
+    do_animate, anim_type, anim_args = anim_data
+    if do_animate:
+        aa = anim.Animate(t, angles, fname)
+        if anim_type == 'phase':
+            aa.do_phase_space_animation(imu_to_plot)
+        elif anim_type == 'top_down':
+            do_decomp = anim_args == 'decomp'
+            aa.do_birds_eye_view_animation(imu_to_plot, do_decomp)
+        elif anim_type == 'pendulum':
+            if imu_to_plot == 'lamp' or imu_to_plot == 'both':
+                if anim_args == 'outer' or anim_args == 'both':
+                    aa.do_pendulum_animation(LAMP_OUTER)
+                if anim_args == 'inner' or anim_args == 'both':
+                    aa.do_pendulum_animation(LAMP_INNER)
+            if imu_to_plot == 'base' or imu_to_plot == 'both':
+                if anim_args == 'outer' or anim_args == 'both':
+                    aa.do_pendulum_animation(BASE_OUTER)
+                if anim_args == 'inner' or anim_args == 'both':
+                    aa.do_pendulum_animation(BASE_INNER)
+        else:
+            assert(False), "Animation processing messed up!"
+        return
 
     fig, ax = plt.subplots()
     size = 2
@@ -214,7 +236,7 @@ def analyze(fname, imu_to_plot, estimate, use_calibration, \
         if plot_slice:
             fig_name += "_from%.2fto%.2f" % (t_start, t_end)
         fig_name += '.png'
-        fig_name = os.path.join(get_data_dir(), fig_name)
+        fig_name = os.path.join(get_data_dir(), os.path.dirname(fname), fig_name)
         plt.savefig(fig_name)
         logString("Saved fig to {0}".format(fig_name))
         plt.close();

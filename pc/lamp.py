@@ -16,6 +16,7 @@ def main():
     baud = args['baud']
     record_mode = args['record']
     analyze_fname = args['analyze']
+    animate_str = args['animate']
     playback_fname = args['playback']
     baseline_fname = args['set_baseline']
     angles = args['set_angles']
@@ -33,13 +34,14 @@ def main():
         logString("2 or more of: playback, analyze, set_baseline were selected."
                   " Please only choose one of these")
         quit()
-    
-    # TODO: validate file_slice
     if plot_slice:
         validate_slice_args("plot_slice", plot_slice)
     if file_slice:
         file_slice_fname, file_slice_args = file_slice.split(",", 1)
         validate_slice_args("file_slice", file_slice_args)
+    anim_data = (False, None, None)
+    if animate_str:
+        anim_data = validate_anim_args(animate_str)
     
     # Call requested function
     if analyze_fname:
@@ -51,7 +53,8 @@ def main():
             args['use_calibration'], \
             args['use_legacy_sign_convention'], \
             args['use_time_stamps'], \
-            plot_slice \
+            plot_slice, \
+            anim_data
         )
     elif playback_fname:
         logString("Starting playback")

@@ -1,6 +1,6 @@
 # Utilities
 # Author: Tyler
-# Data: May 12, 2019
+# Date: May 12, 2019
 
 from datetime import datetime
 import serial.tools.list_ports
@@ -96,6 +96,23 @@ def parse_args():
              ' data. Arguments: ind_angles, comb_angles, none.'
              ' Default: none',
         default='none'
+    )
+
+    parser.add_argument(
+        '--animate',
+        help='(analyze option) Specifies whether to create animations of the'
+             ' data. Arguments are the following strings: phase, pendulum, '
+             ' top_down. The --imu option for analyze selects whether the '
+             ' lamp data or base data is used, or both. Pendulum plots have '
+             ' 3 supported arguments: outer, inner, or both. For example, '
+             ' the command --animate=pendulum,both will create pendulum '
+             ' animations for the selected IMU(s) along both the outer and '
+             ' inner axes. Top-down plots support one optional argument '
+             ' called decomp. Example: --animate=top_down,decomp will create '
+             ' a bird\'s eye view animation of pendulum motion while showing '
+             ' the vector decomposition of contributions from the inner and '
+             ' outer sensors.',
+        default=''
     )
 
     parser.add_argument(
@@ -237,6 +254,41 @@ def validate_slice_args(slice_name, slice_args):
         logString("--%s start time must be >= end time!" % slice_name)
         quit()
 
+def validate_anim_args(animate_str):
+    anim_strs = animate_str.split(",")
+    assert(len(anim_strs) > 0), "Animate needs an argument but got none!"
+    anim_type = anim_strs[0]
+    assert( \
+        anim_type == 'phase' or \
+        anim_type == 'pendulum' or \
+        anim_type == 'top_down' \
+    ), "Invalid argument to animate. Must be phase, pendulum, or top_down"
+    if anim_type == 'pendulum':
+        assert(len(anim_strs) == 2), \
+            "Invalid number of arguments to animate (pendulum). Must be 1"
+        anim_args = anim_strs[1]
+        assert( \
+            anim_args == 'outer' or \
+            anim_args == 'inner' or \
+            anim_args == 'both' \
+        ), "Invalid argument to animate (pendulum). Must be outer, inner, or both"
+    elif anim_type == 'top_down':
+        if len(anim_strs) == 1:
+            anim_args = None
+        elif len(anim_strs) == 2:
+            assert(anim_strs[1] == 'decomp'), \
+                "Animate (top_down) got invalid argument. Supported args: decomp"
+            anim_args = anim_strs[1]
+        else:
+            assert(false), \
+                "Invalid number of arguments to animate (top_down). Must be 0 or 1"
+    else:
+        assert(len(anim_strs) == 1), \
+            "Animate (phase) does not need any arguments, but it got 1!"
+        anim_args = None
+    anim_data = (True, anim_type, anim_args)
+    return anim_data
+
 CMD_BLINK = 'L'
 CMD_CTRL_DI = '0'
 CMD_CTRL_EN = '1'
@@ -287,6 +339,14 @@ def disable_imus(ser):
     logString("Disabling IMUs")
     ser.write(CMD_SENS_DI.encode())
 
+# For angles in Analyze
+OUTER = 0
+INNER = 1
+BASE_OUTER = 0
+BASE_INNER = 1
+LAMP_OUTER = 2
+LAMP_INNER = 3
+# For raw data bytes
 IMU_BUF_SIZE = 2*6*4 # 2 IMUs * 6 floats
 BUF_SIZE = IMU_BUF_SIZE + 1 # 1 status byte
 LOGGED_BUF_SIZE = BUF_SIZE + 20 # 20 bytes of plaintext for time + status
