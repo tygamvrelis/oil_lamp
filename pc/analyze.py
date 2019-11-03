@@ -175,7 +175,9 @@ def analyze(fname, imu_to_plot, estimate, use_calibration, \
     animate = True
     if animate:
         aa = anim.Animate(t, angles, fname)
-        aa.do_polar_animation(imu_to_plot)
+        aa.do_phase_space_animation(imu_to_plot)
+        aa.do_birds_eye_view_animation(imu_to_plot)
+        aa.do_birds_eye_view_animation(imu_to_plot, True)
         #aa.do_animate(LAMP_OUTER)
         #aa.do_animate(BASE_OUTER)
 
