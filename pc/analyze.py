@@ -171,15 +171,23 @@ def analyze(fname, imu_to_plot, estimate, use_calibration, \
     
     # TODO: make this accessible from command-line (either as its own command
     # or an analyze option)
-    # TODO: how could we choose between comb and ind angles in a simple way?
     animate = True
     if animate:
-        aa = anim.Animate(t, angles, fname)
-        aa.do_phase_space_animation(imu_to_plot)
-        aa.do_birds_eye_view_animation(imu_to_plot)
-        aa.do_birds_eye_view_animation(imu_to_plot, True)
-        #aa.do_animate(LAMP_OUTER)
-        #aa.do_animate(BASE_OUTER)
+        pass
+        # aa = anim.Animate(t, angles, fname)
+        # aa.do_phase_space_animation('both')
+        # aa.do_phase_space_animation('lamp')
+        # aa.do_phase_space_animation('base')
+        # aa.do_birds_eye_view_animation('both')
+        # aa.do_birds_eye_view_animation('lamp', True)
+        # aa.do_birds_eye_view_animation('base')
+        # aa.do_birds_eye_view_animation('both', True)
+        # aa.do_birds_eye_view_animation('lamp')
+        # aa.do_birds_eye_view_animation('base', True)
+        # aa.do_pendulum_animation(LAMP_OUTER)
+        # aa.do_pendulum_animation(LAMP_INNER)
+        # aa.do_pendulum_animation(BASE_OUTER)
+        # aa.do_pendulum_animation(BASE_INNER)
 
     fig, ax = plt.subplots()
     size = 2

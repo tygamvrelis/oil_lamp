@@ -30,14 +30,14 @@ class Animate:
         )
         self.fname = os.path.splitext(os.path.basename(fname))[0]
 
-    def do_animate(self, angle_idx):
+    def do_pendulum_animation(self, angle_idx):
         '''
         Creates an animation based on the given angle data and time samples
 
         Arguments
         --------
             angle_idx : int
-                Specifies which angles are to be animated (e.g. BASE_OUTER, )
+                Specifies which angles are to be animated (e.g. BASE_OUTER)
         '''
         fname = 'pendulum'
         if angle_idx == BASE_OUTER:
@@ -52,12 +52,12 @@ class Animate:
         fname = os.path.join(self.base_name, self.fname + '_' + fname)
         fourcc = VideoWriter_fourcc(*'MP42')
         video = VideoWriter(fname, fourcc, float(self.FPS), (self.width, self.height))
-        self.L *= 400 # Make it look big in the frame
+        L = self.L * 40 # Make it look big in the frame
         radius = 25
         for i in range(0, self.__t.shape[0], int(1 / (self.TS * self.FPS))):
             angle = self.__angles[angle_idx, i] * np.pi / 180.0
-            circ_x = self.mid_x + int(self.L * np.sin(angle));
-            circ_y = self.mid_y // 2 + int(self.L * np.cos(angle));
+            circ_x = self.mid_x + int(L * np.sin(angle));
+            circ_y = self.mid_y // 2 + int(L * np.cos(angle));
 
             frame = np.full((self.height, self.width, 3), 65535, dtype=np.uint8) # Fill white
             cv2.putText(
@@ -82,6 +82,7 @@ class Animate:
             )
             video.write(frame)
         video.release()
+        logString("Saved pendulum animation to " + fname)
 
     def add_phase_space_axis_labels(self, frame, scale):
         '''
@@ -207,6 +208,7 @@ class Animate:
                 )
             video.write(frame)
         video.release()
+        logString("Saved phase space animation to " + fname)
 
     def plot_birds_eye_view_reference_wall(self, frame):
         '''
@@ -334,6 +336,7 @@ class Animate:
             )
             video.write(frame)
         video.release()
+        logString("Saved bird's eye view animation to " + fname)
 
 
 def generate_standalone_pendulum_video():
