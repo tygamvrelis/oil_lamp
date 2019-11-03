@@ -300,7 +300,7 @@ class Animate:
             angle = i * 1.0 * np.pi / 180.0
             dist = self.L * np.sin(angle);
             dist_x = int(dist * scale) + self.mid_x
-            dist_y = int(dist * scale) + self.mid_y
+            dist_y = -1 * int(dist * scale) + self.mid_y
             dist = np.round(dist, 2)
             cv2.line(
                 frame, (dist_x, 0), (dist_x, self.height),
@@ -360,13 +360,13 @@ class Animate:
                 angle_outer = self.__angles[BASE_OUTER, i] * np.pi / 180.0
                 angle_inner = self.__angles[BASE_INNER, i] * np.pi / 180.0
                 d_outer = int(L * np.sin(angle_outer));
-                d_inner = int(L * np.sin(angle_inner));
+                d_inner = -1 * int(L * np.sin(angle_inner));
                 pos.append((d_outer, d_inner))
             if imu == 'lamp' or imu == 'both':
                 angle_outer = self.__angles[LAMP_OUTER, i] * np.pi / 180.0
                 angle_inner = self.__angles[LAMP_INNER, i] * np.pi / 180.0
                 d_outer = int(L * np.sin(angle_outer));
-                d_inner = int(L * np.sin(angle_inner));
+                d_inner = -1 * int(L * np.sin(angle_inner));
                 pos.append((d_outer, d_inner))
             if decomp:
                 # Color legend
