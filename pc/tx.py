@@ -8,6 +8,7 @@ import os
 import struct
 import numpy as np
 import socket
+import select
 from util import *
 from analyze import get_angles, cFilt, make_complementary_filters
 
@@ -335,6 +336,7 @@ def playback_networked(port, baud, udp_port, verbose):
     bind_ip = '' # All addresses
     bind_port = udp_port
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+        sock.setblocking(False)
         try:
             sock.bind((bind_ip, bind_port))
         except socket.error:
@@ -361,20 +363,27 @@ def playback_networked(port, baud, udp_port, verbose):
                 with serial.Serial(port, baud, timeout=0) as ser:
                     logString("Connected")
                     enable_servos(ser)
-                    angles = np.ndarray(shape=(4, 1))
+                    angles = np.zeros(shape=(4, 1))
                     while True:
-                        packet = sock.recvfrom(BUF_SIZE)
-                        imu_data = decode_data(packet)
-                        angles[BASE_OUTER:BASE_INNER+1] = base_filt.update(
-                            imu_data[IMU_BASE_IDX + GYRO_IDX:],
-                            imu_data[IMU_BASE_IDX + ACC_IDX:],
-                            1000.0 / get_sample_rate()
-                        )
-                        angles[LAMP_OUTER:LAMP_INNER+1] = lamp_filt.update(
-                            imu_data[IMU_LAMP_IDX + GYRO_IDX:],
-                            imu_data[IMU_LAMP_IDX + ACC_IDX:],
-                            1000.0 / get_sample_rate()
-                        )
+                        ready = select.select([sock], [], [], 0)
+                        # TODO(tyler): since the socket could have partial
+                        # data (e.g. 3 bytes instead of BUF_SIZE), we need a
+                        # way to perform frame synchronization (detect end of
+                        # message) and reassemble partially-received packets.
+                        # Similar to logic for receiving from MCU, maybe
+                        if ready[0]:
+                            packet = sock.recvfrom(BUF_SIZE)
+                            imu_data = decode_data(packet)
+                            angles[BASE_OUTER:BASE_INNER+1] = base_filt.update(
+                                imu_data[IMU_BASE_IDX + GYRO_IDX:],
+                                imu_data[IMU_BASE_IDX + ACC_IDX:],
+                                1000.0 / get_sample_rate()
+                            )
+                            angles[LAMP_OUTER:LAMP_INNER+1] = lamp_filt.update(
+                                imu_data[IMU_LAMP_IDX + GYRO_IDX:],
+                                imu_data[IMU_LAMP_IDX + ACC_IDX:],
+                                1000.0 / get_sample_rate()
+                            )
 
                         outer_angle = angles[BASE_OUTER] + angles[LAMP_OUTER]
                         inner_angle = angles[BASE_INNER] + angles[LAMP_INNER]
