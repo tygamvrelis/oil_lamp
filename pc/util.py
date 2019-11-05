@@ -74,6 +74,35 @@ def parse_args():
         type=str2bool,
         default=True
     )
+
+    parser.add_argument(
+        '--network',
+        help='(record, playback option) Sends data over the internet (in '
+             ' record mode) or receives data over the internet (in '
+             ' playback mode) if True. Note that if set to True for record '
+             ' mode, the ip address of the remote receiver be specified. The '
+             ' UDP port must match for both the sender and the receiver, and '
+             ' can be specified using the UDP port argument. '
+             ' Default: False',
+        type=str2bool,
+        default=False
+    )
+
+    parser.add_argument(
+        '--ip_addr',
+        help='(network option, record mode) Specifies the IP address of the '
+             ' remote receiver. Must be IPv4, dotted decimal notation.',
+        default=''
+    )
+
+    parser.add_argument(
+        '--udp_port',
+        help='(network option) Specifies the UDP port from which the system '
+             ' will send (if used in recording mode) or receive (if used in '
+             ' playback mode).',
+        type=int,
+        default=42424
+    )
     
     parser.add_argument(
         '--analyze',

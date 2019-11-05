@@ -73,31 +73,38 @@ class cFilt:
         '''
         return self.__theta_p, self.__theta_r
 
+def make_complementary_filters():
+    '''
+    Returns complementary filters to perform angle estimation.
+
+    tau = alpha*dt/(1-alpha)
+    so alpha = tau/(tau + dt)
+    Swing period is about 0.51 [s] and dt is 0.01 [s]. Use tau = 0.255 [s]
+    '''
+    ALPHA_P = 0.96226415094
+    ALPHA_R = 0.96226415094
+    base_filt = cFilt(ALPHA_P, ALPHA_R)
+    lamp_filt = cFilt(ALPHA_P, ALPHA_R)
+    return base_filt, lamp_filt
+
 def get_angles(raw_imu_data, num_samples):
     '''
     Computes a time series of angles given a time series of raw IMU data
     '''
-    # tau = alpha*dt/(1-alpha)
-    # so alpha = tau/(tau + dt)
-    # Swing period is about 0.51 [s] and dt is 0.01 [s]. Use tau = 0.255 [s]
-    alpha_p = 0.96226415094
-    alpha_r = 0.96226415094
-    base_filt = cFilt(alpha_p, alpha_r)
-    lamp_filt = cFilt(alpha_p, alpha_r)
-    
     assert(raw_imu_data.shape[0] == 12), "Invalid IMU data size"
+    base_filt, lamp_filt = make_complementary_filters()
 
     angles = np.ndarray(shape=(4, num_samples))
     for i in range(num_samples):
         angles[BASE_OUTER:BASE_INNER+1,i] = base_filt.update(
             raw_imu_data[IMU_BASE_IDX + GYRO_IDX:,i],
             raw_imu_data[IMU_BASE_IDX + ACC_IDX:,i],
-            10
+            1000.0 / get_sample_rate()
         )
         angles[LAMP_OUTER:LAMP_INNER+1,i] = lamp_filt.update(
             raw_imu_data[IMU_LAMP_IDX + GYRO_IDX:,i],
             raw_imu_data[IMU_LAMP_IDX + ACC_IDX:,i],
-            10
+            1000.0 / get_sample_rate()
         )
     return angles
 

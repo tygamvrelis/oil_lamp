@@ -7,14 +7,16 @@ import serial
 import os
 import struct
 import numpy as np
+import socket
 from util import *
-from analyze import get_angles
+from analyze import get_angles, cFilt, make_complementary_filters
 
 def transmit_angles(ser, a_outer, a_inner, dryrun=False):
     '''
     Sends angle data to the MCU
+    
+    Arguments
     --------
-    Arguments:
         port : serial.Serial
             COM port that MCU is connected to
         a_outer : float
@@ -40,8 +42,9 @@ def send_servo_angles(port, baud, angles):
     '''
     Sends a command to the microcontroller to set the servos to the specified
     angles.
+    
+    Arguments
     --------
-    Arguments:
         port : serial.Serial
             COM port that MCU is connected to
         baud : int
@@ -92,8 +95,9 @@ def send_servo_angles(port, baud, angles):
 def change_servo_usage(port, baud, use_servos):
     '''
     Sends a command to the MCU to enable or disable servo usage
+    
+    Arguments
     --------
-    Arguments:
         port : serial.Serial
             COM port that MCU is connected to
         baud : int
@@ -123,8 +127,9 @@ def change_servo_usage(port, baud, use_servos):
 def change_imu_usage(port, baud, use_imus):
     '''
     Sends a command to the MCU to enable or disable IMU sensing
+    
+    Arguments
     --------
-    Arguments:
         port : serial.Serial
             COM port that MCU is connected to
         baud : int
@@ -156,8 +161,9 @@ def send_sine_wave(port, baud, params, servo, verbose):
     Sends a sine wave to the microcontroller for servo actuation
     
     output = amp * exp(-tau * t) * sin(2 * pi * f * t)
+    
+    Arguments
     --------
-    Arguments:
         port : serial.Serial
             COM port that MCU is connected to
         baud : int
@@ -237,8 +243,9 @@ def playback(port, baud, fname, loop, use_legacy_sign_convention, \
     use_time_stamps, verbose):
     '''
     Initiates playback mode
+    
+    Arguments
     --------
-    Arguments:
         port : serial.Serial
             COM port that MCU is connected to
         baud : int
@@ -258,7 +265,11 @@ def playback(port, baud, fname, loop, use_legacy_sign_convention, \
     '''
     fname = os.path.join(get_data_dir(), fname)
     logString("Loading data file " + fname)
-    imu_data, num_samples, time_stamps = load_data_from_file(fname, use_calibration=True, use_legacy_sign_convention=use_legacy_sign_convention)
+    imu_data, num_samples, time_stamps = load_data_from_file( \
+        fname, \
+        use_calibration=True, \
+        use_legacy_sign_convention=use_legacy_sign_convention
+    )
     t, imu_data, num_samples = make_time_series( \
         imu_data, \
         num_samples, \
@@ -305,3 +316,78 @@ def playback(port, baud, fname, loop, use_legacy_sign_convention, \
                     logString("Serial exception. Retrying...(attempt {0})".format(num_tries))
             time.sleep(0.01)
             num_tries = num_tries + 1
+
+def playback_networked(port, baud, udp_port, verbose):
+    '''
+    Initiates playback mode
+    
+    Arguments
+    --------
+        port : serial.Serial
+            COM port that MCU is connected to
+        baud : int
+            Symbol rate over COM port
+        udp_port : int
+            The UDP port that the program will listen to for angles
+        verbose : bool
+            Prints additional messages if True
+    '''
+    bind_ip = '' # All addresses
+    bind_port = udp_port
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+        try:
+            sock.bind((bind_ip, bind_port))
+        except socket.error:
+            logString(
+                "Failed to bind to UDP port %d. Letting OS choose port." % udp_port
+            )
+            sock.bind((bind_ip, 0))
+        ip, udp_port_str = sock.getsockname()
+        logString("Receiver listening on {0}:{1} (UDP)".format(ip, udp_port_str))
+        
+        logString(list_ports())
+        logString("Attempting connection to embedded")
+        logString("\tPort: " + port)
+        logString("\tBaud rate: " + str(baud))
+        
+        tx_cycle = WaitForMs(10) # 10 ms wait between angle transmissions
+        tx_cycle.set_e_gain(1.5)
+        tx_cycle.set_e_lim(0, -3.0) # Never wait longer, but allow down to 3 ms less
+        
+        num_tries = 0
+        base_filt, lamp_filt = make_complementary_filters()
+        while True:
+            try:
+                with serial.Serial(port, baud, timeout=0) as ser:
+                    logString("Connected")
+                    enable_servos(ser)
+                    angles = np.ndarray(shape=(4, 1))
+                    while True:
+                        packet = sock.recvfrom(BUF_SIZE)
+                        imu_data = decode_data(packet)
+                        angles[BASE_OUTER:BASE_INNER+1] = base_filt.update(
+                            imu_data[IMU_BASE_IDX + GYRO_IDX:],
+                            imu_data[IMU_BASE_IDX + ACC_IDX:],
+                            1000.0 / get_sample_rate()
+                        )
+                        angles[LAMP_OUTER:LAMP_INNER+1] = lamp_filt.update(
+                            imu_data[IMU_LAMP_IDX + GYRO_IDX:],
+                            imu_data[IMU_LAMP_IDX + ACC_IDX:],
+                            1000.0 / get_sample_rate()
+                        )
+
+                        outer_angle = angles[BASE_OUTER] + angles[LAMP_OUTER]
+                        inner_angle = angles[BASE_INNER] + angles[LAMP_INNER]
+                        if verbose:
+                            logString("Outer: {0}|Inner: {1}".format(outer_angle, inner_angle))
+                        # Send angles and wait a few ms before sending again
+                        transmit_angles(ser, outer_angle, inner_angle)
+                        tx_cycle.wait()
+            except serial.serialutil.SerialException as e:
+                if(num_tries % 100 == 0):
+                    if(str(e).find("FileNotFoundError")):
+                        logString("Port not found. Retrying...(attempt {0})".format(num_tries))
+                    else:
+                        logString("Serial exception. Retrying...(attempt {0})".format(num_tries))
+                time.sleep(0.01)
+                num_tries = num_tries + 1
