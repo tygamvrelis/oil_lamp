@@ -9,6 +9,7 @@ import struct
 import numpy as np
 import socket
 import select
+from threading import Thread, Event, Lock
 from util import *
 from analyze import get_angles, cFilt, make_complementary_filters
 
@@ -318,6 +319,50 @@ def playback(port, baud, fname, loop, use_legacy_sign_convention, \
             time.sleep(0.01)
             num_tries = num_tries + 1
 
+class NetworkedReceiver:
+    '''
+    Methods for receiving data over the internet, and safely sharing it between
+    threads
+    '''
+    def __init__(self):
+        self.__imu_data = np.zeros(IMU_BUF_SIZE) + float('inf')
+        self.__lock = Lock()
+        self.__stop_event = Event()
+
+    def stop(self):
+        '''
+        Causes the thread to exit after the next receive iteration
+        '''
+        self.__stop_event.set()
+
+    def __stop_requested(self):
+        return self.__stop_event.is_set()
+
+    def get_latest_imu_data(self):
+        '''
+        Returns the latest raw IMU data in a thread-safe manner
+        '''
+        if self.__lock.acquire(True):
+            imu_data = self.__imu_data
+            self.__lock.release()
+        return imu_data
+
+    def recv_loop(self, sock):
+        '''
+        Loop for receiving raw data over network
+        '''
+        base_filt, lamp_filt = make_complementary_filters()
+        while(1):
+            if self.__stop_requested():
+                break
+            ready = select.select([sock], [], [], 1.0 / get_sample_rate())
+            if ready[0]:
+                packet = sock.recvfrom(BUF_SIZE)
+                if self.__lock.acquire(True):
+                    self.__imu_data = decode_data(packet)
+                    self.__lock.release()
+
+
 def playback_networked(port, baud, udp_port, verbose):
     '''
     Initiates playback mode
@@ -357,23 +402,20 @@ def playback_networked(port, baud, udp_port, verbose):
         tx_cycle.set_e_lim(0, -3.0) # Never wait longer, but allow down to 3 ms less
         
         num_tries = 0
-        base_filt, lamp_filt = make_complementary_filters()
-        while True:
-            try:
-                with serial.Serial(port, baud, timeout=0) as ser:
-                    logString("Connected")
-                    enable_servos(ser)
-                    angles = np.zeros(shape=(4, 1))
-                    while True:
-                        ready = select.select([sock], [], [], 0)
-                        # TODO(tyler): since the socket could have partial
-                        # data (e.g. 3 bytes instead of BUF_SIZE), we need a
-                        # way to perform frame synchronization (detect end of
-                        # message) and reassemble partially-received packets.
-                        # Similar to logic for receiving from MCU, maybe
-                        if ready[0]:
-                            packet = sock.recvfrom(BUF_SIZE)
-                            imu_data = decode_data(packet)
+        nr = NetworkedReceiver()
+        recv_thread = Thread(
+            name="NetworkReceiver", target=nr.recv_loop, args=(sock, )
+        )
+        recv_thread.start()
+        try:
+            while True:
+                try:
+                    with serial.Serial(port, baud, timeout=0) as ser:
+                        logString("Connected")
+                        enable_servos(ser)
+                        angles = np.zeros(shape=(4, 1))
+                        while True:
+                            imu_data = nr.get_latest_imu_data()
                             angles[BASE_OUTER:BASE_INNER+1] = base_filt.update(
                                 imu_data[IMU_BASE_IDX + GYRO_IDX:],
                                 imu_data[IMU_BASE_IDX + ACC_IDX:],
@@ -384,19 +426,23 @@ def playback_networked(port, baud, udp_port, verbose):
                                 imu_data[IMU_LAMP_IDX + ACC_IDX:],
                                 1000.0 / get_sample_rate()
                             )
-
-                        outer_angle = angles[BASE_OUTER] + angles[LAMP_OUTER]
-                        inner_angle = angles[BASE_INNER] + angles[LAMP_INNER]
-                        if verbose:
-                            logString("Outer: {0}|Inner: {1}".format(outer_angle, inner_angle))
-                        # Send angles and wait a few ms before sending again
-                        transmit_angles(ser, outer_angle, inner_angle)
-                        tx_cycle.wait()
-            except serial.serialutil.SerialException as e:
-                if(num_tries % 100 == 0):
-                    if(str(e).find("FileNotFoundError")):
-                        logString("Port not found. Retrying...(attempt {0})".format(num_tries))
-                    else:
-                        logString("Serial exception. Retrying...(attempt {0})".format(num_tries))
-                time.sleep(0.01)
-                num_tries = num_tries + 1
+                            outer_angle = angles[BASE_OUTER] + angles[LAMP_OUTER]
+                            inner_angle = angles[BASE_INNER] + angles[LAMP_INNER]
+                            if verbose:
+                                logString("Outer: {0}|Inner: {1}".format(outer_angle, inner_angle))
+                            # Send angles and wait a few ms before sending again
+                            transmit_angles(ser, outer_angle, inner_angle)
+                            tx_cycle.wait()
+                except serial.serialutil.SerialException as e:
+                    if(num_tries % 100 == 0):
+                        if(str(e).find("FileNotFoundError")):
+                            logString("Port not found. Retrying...(attempt {0})".format(num_tries))
+                        else:
+                            logString("Serial exception. Retrying...(attempt {0})".format(num_tries))
+                    time.sleep(0.01)
+                    num_tries = num_tries + 1
+        except KeyboardInterrupt as e:
+            nr.stop()
+            recv_thread.join()
+            logString("Receive thread joined")
+            raise KeyboardInterrupt
