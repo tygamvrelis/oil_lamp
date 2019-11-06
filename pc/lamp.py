@@ -6,7 +6,7 @@ import os
 import sys
 import numpy as np
 from util import *
-from rx import record
+from rx import record, record_networked
 from tx import *
 from analyze import analyze
 
@@ -17,6 +17,7 @@ def main():
     record_mode = args['record']
     analyze_fname = args['analyze']
     is_networked = args['network']
+    ip_addr = args['ip_addr']
     udp_port = args['udp_port']
     animate_str = args['animate']
     playback_fname = args['playback']
@@ -45,7 +46,7 @@ def main():
     if animate_str:
         anim_data = validate_anim_args(animate_str)
     if is_networked:
-        if record_mode and not args['ip_addr']:
+        if record_mode and not ip_addr:
             print("ERROR: Must specify receiver's IP address")
             quit()
         if udp_port < 1025 or udp_port > 65535:
@@ -100,7 +101,10 @@ def main():
         )
     elif record_mode:
         logString("Starting recording")
-        record(port, baud, verbose)
+        if not is_networked:
+            record(port, baud, verbose)
+        else:
+            record_networked(port, baud, ip_addr, udp_port, verbose)
     else:
         logString("No option selected")
 

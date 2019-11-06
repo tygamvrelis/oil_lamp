@@ -328,6 +328,7 @@ class NetworkedReceiver:
         self.__imu_data = np.zeros(IMU_BUF_SIZE) + float('inf')
         self.__lock = Lock()
         self.__stop_event = Event()
+        self.__last_seq_num = float('-inf')
 
     def stop(self):
         '''
@@ -358,22 +359,18 @@ class NetworkedReceiver:
             ready = select.select([sock], [], [], 1.0 / get_sample_rate())
             if ready[0]:
                 packet = sock.recvfrom(BUF_SIZE)
-                # TODO: We will want to add a sequence number to this packet so
-                # that if any old packets arrive at a later time (out of order)
-                # we know to discard them. This can be done by attaching a
-                # large int to the packet (e.g. 64 bits) which the transmitter
-                # increments by one each time it sends a message. Then at the
-                # receiver, we keep track of the max sequence number seen so
-                # far and only process packets whose sequence number exceeds
-                # this
-                if self.__lock.acquire(True):
-                    self.__imu_data = decode_data(packet)
+                # We use a sequence number so that if any old packets arrive at
+                # a later time (out of order) we know to discard them
+                seq_num, imu_data = decode_data_inet(packet)
+                if seq_num > self.__last_seq_num and self.__lock.acquire(True):
+                    self.__imu_data = imu_data
                     self.__lock.release()
+                    self.__last_seq_num = seq_num
 
 
 def playback_networked(port, baud, udp_port, verbose):
     '''
-    Initiates playback mode
+    Initiates playback mode for data received over the internet
     
     Arguments
     --------
@@ -382,7 +379,7 @@ def playback_networked(port, baud, udp_port, verbose):
         baud : int
             Symbol rate over COM port
         udp_port : int
-            The UDP port that the program will listen to for angles
+            The UDP port that the program will listen to for data
         verbose : bool
             Prints additional messages if True
     '''

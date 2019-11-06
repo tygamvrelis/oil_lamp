@@ -378,7 +378,8 @@ LAMP_INNER = 3
 # For raw data bytes
 IMU_BUF_SIZE = 2*6*4 # 2 IMUs * 6 floats
 BUF_SIZE = IMU_BUF_SIZE + 1 # 1 status byte
-LOGGED_BUF_SIZE = BUF_SIZE + 20 # 20 bytes of plaintext for time + status
+LOGGED_BUF_SIZE = BUF_SIZE + 20 # 20 bytes of plaintext for time + 
+BUF_SIZE_INET = BUF_SIZE + 4 # 4 bytes for 32-bit int sequence number
 IMU_BASE_IDX = 0
 IMU_LAMP_IDX = 6
 ACC_IDX = 0
@@ -414,6 +415,15 @@ def decode_data(buff):
     for i in range(num_iter):
         l.append(struct.unpack('<f', buff[i * 4:(i + 1) * 4])[0])
     return np.array(l)
+
+def decode_data_inet(buff):
+    '''
+    Decodes a packet of raw data sent over the internet
+    '''
+    assert(len(buff) == BUF_SIZE_INET), "Length is {0}".format(len(buff))
+    imu_data = decode_data(buff[0:BUF_SIZE])
+    seq_number = struct.unpack("<L", buff[BUF_SIZE:])
+    return seq_number, imu_data
 
 def decode_status(buff):
     '''

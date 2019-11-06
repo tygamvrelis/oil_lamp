@@ -24,24 +24,24 @@ def print_imu(data):
 
 def log_preamble(file):
     preamble = "Order of data on each line is:\n"
-    preamble = preamble + ("\tTime\n"
-                          "\tStatus\n"
-                          "\tBase:\n"
-                          "\t\tAz\n"
-                          "\t\tAy\n"
-                          "\t\tAx\n"
-                          "\t\tVz\n"
-                          "\t\tVy\n"
-                          "\t\tVx\n"
-                          "\tLamp:\n"
-                          "\t\tAz\n"
-                          "\t\tAy\n"
-                          "\t\tAx\n"
-                          "\t\tVz\n"
-                          "\t\tVy\n"
-                          "\t\tVx\n"
-                          "START\n")
-    file.write(preamble)
+    preamble += ("\tTime\n"
+                 "\tStatus\n"
+                 "\tBase:\n"
+                 "\t\tAz\n"
+                 "\t\tAy\n"
+                 "\t\tAx\n"
+                 "\t\tVz\n"
+                 "\t\tVy\n"
+                 "\t\tVx\n"
+                 "\tLamp:\n"
+                 "\t\tAz\n"
+                 "\t\tAy\n"
+                 "\t\tAx\n"
+                 "\t\tVz\n"
+                 "\t\tVy\n"
+                 "\t\tVx\n"
+                 "START\n")
+    file.write(preamble.encode())
                           
 def log_data(file, buff):
     '''
@@ -54,7 +54,7 @@ def log_data(file, buff):
     status = decode_status(buff)
     data_to_write = datetime.now().strftime('%H:%M:%S.%f')[:-3] + " "
     data_to_write = data_to_write + "stat=" + str(status) + " "
-    file.write(data_to_write)       # Human-readable text, for time + flags
+    file.write(data_to_write.encoder()) # Human-readable text, for time + flags
     file.write(get_imu_bytes(buff)) # Binary data. 96% of file if written as str
     file.write("\n")
     if log_data.n > 0 and log_data.n % 10 == 0:
@@ -156,6 +156,64 @@ def record(port, baud, verbose):
                         success, buff = receive(ser)
                         if success:
                             log_data(f, buff)
+            except serial.serialutil.SerialException as e:
+                if(num_tries % 100 == 0):
+                    if(str(e).find("FileNotFoundError")):
+                        logString("Port not found. Retrying...(attempt {0})".format(num_tries))
+                    else:
+                        logString("Serial exception. Retrying...(attempt {0})".format(num_tries))
+                time.sleep(0.01)
+                num_tries = num_tries + 1
+
+def record_networked(port, baud, ip_addr, udp_port, verbose):
+    '''
+    Initiates recording mode and sends data over the internet to a playback
+    entity
+    --------
+    Arguments:
+        port : serial.Serial
+            COM port that MCU is connected to
+        baud : int
+            Symbol rate over COM port
+        ip_addr : str
+            IPv4 IP address of host in dotted decimal format
+        udp_port : int
+            The UDP port that the playback entity is listening to for data
+        verbose : bool
+            Prints additional messages if True
+    '''
+    logString(list_ports())
+    make_data_dir()
+    
+    fname = get_log_file_name()
+    logString("Creating data file " + fname)
+    first = True
+    with open(fname, 'wb') as f:
+        log_preamble(f)
+        logString("Attempting connection to embedded")
+        logString("\tPort: " + port)
+        logString("\tBaud rate: " + str(baud))
+        
+        num_tries = 0
+        seq_num = 0
+        while True:
+            try:
+                with serial.Serial(port, baud, timeout=0) as ser:
+                    logString("Connected")
+                    enable_imus(ser)
+                    if first:
+                        first = False
+                        ser.write(CMD_BLINK.encode()) # L => flash LED
+                    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+                        print("Sending UDP packets to {0}:{1}".format(ip_addr, udp_port)) 
+                        while True:
+                            success, buff = receive(ser)
+                            if success:
+                                buff_inet = buff + struct.pack("<L", seq_num)
+                                assert(buff_inet == BUF_SIZE_INET), "Length is {0}".format(len(buff_inet))
+                                sock.sendto(buff_inet, (ip_addr, udp_port))
+                                seq_num += 1
+                                log_data(f, buff)
             except serial.serialutil.SerialException as e:
                 if(num_tries % 100 == 0):
                     if(str(e).find("FileNotFoundError")):
