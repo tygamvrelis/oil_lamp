@@ -115,6 +115,7 @@ void lss_reset(lss_t* hlss)
 void lss_set_position(lss_t* hlss, float angle)
 {
     uint8_t buff[16];
+    angle += hlss->offset;
     uint8_t length = snprintf((char*)buff, 16, "#%dD%d", hlss->id, (int)(10.0 * angle));
     buff[length] = '\r'; // Overwrite null character with cmd termination
     lss_transmit(hlss, buff, length + 1);
@@ -125,6 +126,7 @@ void lss_set_position(lss_t* hlss, float angle)
 void lss_set_position_timed(lss_t* hlss, float angle, uint16_t time_ms)
 {
     uint8_t buff[16];
+    angle += hlss->offset;
     uint8_t length = snprintf((char*)buff, 16, "#%dD%dT%d", hlss->id, (int)(10.0 * angle), time_ms);
     buff[length] = '\r'; // Overwrite null character with cmd termination
     lss_transmit(hlss, buff, length + 1);
@@ -174,7 +176,7 @@ void lss_set_led(lss_t* hlss, lss_colors_t color)
         return;
     }
     uint8_t buff[16];
-    uint8_t length = snprintf((char*)buff, 16, "#%dLED%d", hlss->id, color);
+    uint8_t length = snprintf((char*)buff, 16, "#%dCLED%d", hlss->id, color);
     buff[length] = '\r'; // Overwrite null character with cmd termination
     lss_transmit(hlss, buff, length + 1);
 }

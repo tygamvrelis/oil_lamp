@@ -34,6 +34,7 @@ typedef struct
 {
     uint8_t id;                 /**< Motor identification */
     UART_HandleTypeDef* p_uart; /**< UART handle for motor */
+    float offset; /**< Additive offset for calibration on assembly. + is cw */
 }lss_t;
 
 /** @brief Enumerates the low-level I/O modes the library supports */
