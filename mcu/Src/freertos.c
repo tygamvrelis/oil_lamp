@@ -526,24 +526,28 @@ void StartControlTask(void const * argument)
     lss_set_io_type(IO_DMA);
 
     const int8_t ANGULAR_STIFFNESS = -4;
-    const int8_t HOLDING_STIFFNESS = 0;
+    const int8_t HOLDING_STIFFNESS = -4;
     const uint8_t OUTER_ID = 1;
-    lss_t servo_outer = {OUTER_ID, &huart1};
+    const float OUTER_OFFSET = 49;
+    const uint16_t AA = 1000;
+    const uint16_t AD = 1000;
+    lss_t servo_outer = {OUTER_ID, &huart1, OUTER_OFFSET};
     lss_set_led(&servo_outer, LSS_OFF);
     lss_toggle_motion_ctrl(&servo_outer, LSS_EM0);
     lss_set_speed(&servo_outer, 180.0);
-    lss_set_aa(&servo_outer, 1000);
-    lss_set_ad(&servo_outer, 1000);
+    lss_set_aa(&servo_outer, AA);
+    lss_set_ad(&servo_outer, AD);
     lss_set_as(&servo_outer, ANGULAR_STIFFNESS);
     lss_set_hs(&servo_outer, HOLDING_STIFFNESS);
 
     const uint8_t INNER_ID = 0;
-    lss_t servo_inner = {INNER_ID, &huart1};
+    const float INNER_OFFSET = -102;
+    lss_t servo_inner = {INNER_ID, &huart1, INNER_OFFSET};
     lss_set_led(&servo_inner, LSS_OFF);
     lss_toggle_motion_ctrl(&servo_inner, LSS_EM0);
     lss_set_speed(&servo_inner, 180.0);
-    lss_set_aa(&servo_inner, 1000);
-    lss_set_ad(&servo_inner, 1000);
+    lss_set_aa(&servo_inner, AA);
+    lss_set_ad(&servo_inner, AD);
     lss_set_as(&servo_inner, ANGULAR_STIFFNESS);
     lss_set_hs(&servo_inner, HOLDING_STIFFNESS);
 
