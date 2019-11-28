@@ -967,14 +967,22 @@ def do_file_slice(fname, args):
             f.write(line) # Sliced data
     logString("Saved split data to {0}".format(fname_new))
 
+WAV_SAMPLE_RATE = 6000 # Hz
+WAV_MAX_ANGLE = 40.0 # Degrees
 def write_wave(data, fname):
     '''
     Outputs the data stream as a .wav file
+
+    --------
+    Arguments
+        data : np.array
+            Time series of angle data
+        fname : string
+            Name of outputted wav file
     '''
-    # Upsample so that the .wav can be used in respectable audio editing
+    # Interpolate so that the .wav can be used in respectable audio editing
     # software
-    TARGET_SAMPLE_RATE = 6000 # Hz
-    RATE_RATIO = int(TARGET_SAMPLE_RATE / get_sample_rate());
+    RATE_RATIO = int(WAV_SAMPLE_RATE / get_sample_rate());
     NEW_LEN = int(RATE_RATIO * len(data))
     from scipy import interpolate
     x = np.arange(0, len(data), 1)
@@ -987,7 +995,7 @@ def write_wave(data, fname):
     wavfile = wave.open(fname, "w")
     nchannels = 1
     sampwidth = 2 # Number of bytes per sample. Must be consistent with struct pack type
-    framerate = TARGET_SAMPLE_RATE
+    framerate = WAV_SAMPLE_RATE
     nframes = len(data)
     comptype = "NONE"
     compname = "not compressed"
@@ -1000,9 +1008,9 @@ def write_wave(data, fname):
         frames = []
         end_idx = min(i+CHUNK_SIZE, NEW_LEN)
         for val in time_series[i:end_idx]:
-            # Map angles between +/- 40 to +/- 32767. Note that angles outside
-            # +/- 40 will be clipped
-            int_val = int(val * 32767.0 / 40.0)
+            # Map angles between +/- WAV_MAX_ANGLE to +/- 32767. Note that
+            # angles outside +/- WAV_MAX_ANGLE will be clipped
+            int_val = int(val * 32767.0 / WAV_MAX_ANGLE)
             if int_val > 32767:
                 int_val = 32767
             elif int_val < -32767:
@@ -1015,6 +1023,58 @@ def write_wave(data, fname):
         wavfile.writeframes(frames)
     wavfile.close()
 
+def load_angles_from_wav(outer_fname, inner_fname):
+    '''
+    Loads wav files for playback and returns an array of angles
+
+    --------
+    Arguments
+        outer_fname : string
+            Name of wav file containing outer angle data
+        inner_fname : string
+            Name of wav file containing inner angle data
+    '''
+    pass
+    wavfile_outer = wave.open(outer_fname, "r")
+    wavfile_inner = wave.open(inner_fname, "r")
+    # Sanity checks...
+    assert(wavfile_outer.getnchannels() == 1 and wavfile_inner.getnchannels() == 1, \
+        "ERROR: can only support single-channel wav files")
+    assert(wavfile_outer.getsampwidth() == 2 and wavfile_inner.getsampwidth() == 2, \
+        "ERROR: can only support wav files with sample width of 2 bytes")
+    assert( \
+        wavfile_outer.getframerate() == WAV_SAMPLE_RATE and \
+        wavfile_inner.getframerate() == WAV_SAMPLE_RATE, \
+        "ERROR: can only support wav files with sample rate of {} Hz".format(WAV_SAMPLE_RATE) \
+    )
+    nframes = wavfile_outer.getnframes()
+    assert(nframes == wavfile_inner.getnframes(), \
+        "wav files for outer and inner angles must have same length!")
+    
+    # Make angles array and load data into it
+    RATE_RATIO = int(WAV_SAMPLE_RATE / get_sample_rate());
+    ANGLES_LEN = int(nframes / RATE_RATIO) # TODO: can we ever end up out of bounds here?
+    angles = np.ndarray((2, ANGLES_LEN))
+    i = 0
+    CHUNK_SIZE = 60000;
+    while i < ANGLES_LEN:
+        outer_bytes = wavfile_outer.readframes(CHUNK_SIZE)
+        inner_bytes = wavfile_inner.readframes(CHUNK_SIZE)
+        num_bytes_read = len(outer_bytes)
+        assert(num_bytes_read % 2 == 0, "ERROR: impossible to read odd # of bytes from wav")
+        num_samples_read = num_bytes_read//2
+        num_angles_read = num_samples_read//RATE_RATIO
+        tmp = struct.unpack("<{}h".format(num_samples_read), outer_bytes)
+        angles[OUTER,i:i+num_angles_read] = tmp[::RATE_RATIO]
+
+        tmp = struct.unpack("<{}h".format(num_samples_read), inner_bytes)
+        angles[INNER,i:i+num_angles_read] = tmp[::RATE_RATIO]
+        i += num_angles_read
+    wavfile_outer.close()
+    wavfile_inner.close()
+    # Scale
+    angles = angles * WAV_MAX_ANGLE / 32767.0
+    return angles
 
 class WaitForMs:
     '''
