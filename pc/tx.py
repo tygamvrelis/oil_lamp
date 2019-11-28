@@ -304,6 +304,7 @@ def playback(port, baud, fname, loop, use_legacy_sign_convention, \
                 else:
                     logString("Looping is disabled...will quit after sending all angles")
                 while True:
+                    elapsed_time = 0
                     for angle_vec in angles.T:
                         if ext == ".dat":
                             outer_angle = angle_vec[BASE_OUTER] + angle_vec[LAMP_OUTER]
@@ -316,6 +317,9 @@ def playback(port, baud, fname, loop, use_legacy_sign_convention, \
                         # Send angles and wait a few ms before sending again
                         transmit_angles(ser, outer_angle, inner_angle)
                         tx_cycle.wait()
+                        elapsed_time += 1000 / get_sample_rate()
+                        if elapsed_time % 1000 == 0:
+                            print(elapsed_time, end="\r")
                     if not loop:
                         return
         except serial.serialutil.SerialException as e:
