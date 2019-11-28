@@ -971,31 +971,51 @@ def write_wave(data, fname):
     '''
     Outputs the data stream as a .wav file
     '''
+    # Upsample so that the .wav can be used in respectable audio editing
+    # software
+    TARGET_SAMPLE_RATE = 6000 # Hz
+    RATE_RATIO = int(TARGET_SAMPLE_RATE / get_sample_rate());
+    NEW_LEN = int(RATE_RATIO * len(data))
+    print(NEW_LEN)
+    # Create new time series and add our real samples to it
+    time_series = np.full((NEW_LEN, 1), np.nan)
+    for i in range(len(data)):
+        time_series[i * RATE_RATIO] = data[i]
+    # Interpolate
+    nans, idx = nan_helper(time_series)
+    time_series[nans] = interp1d(idx(nans), idx(~nans), time_series[~nans])
+
     fname = os.path.join(fname + ".wav")
+    logString("Making audio file " + fname)
     wavfile = wave.open(fname, "w")
     nchannels = 1
     sampwidth = 2 # Number of bytes per sample. Must be consistent with struct pack type
-    framerate = get_sample_rate();
+    framerate = TARGET_SAMPLE_RATE
     nframes = len(data)
     comptype = "NONE"
     compname = "not compressed"
     wavfile.setparams( \
         (nchannels, sampwidth, framerate, nframes, comptype, compname) \
     )
-    frames = []
-    for val in data:
-        # Map angles between +/- 40 to +/- 32767. Note that angles outside
-        # +/- 40 will be clipped
-        int_val = int(val * 32767.0 / 45.0)
-        if int_val > 32767:
-            int_val = 32767
-        elif int_val < -32767:
-            int_val = -32767
-        if int_val > 32767 or int_val < -32767:
-            print(val, int_val)
-        frames.append(struct.pack('h', int_val))
-    frames = b''.join(frames)
-    wavfile.writeframes(frames)
+    i = 0
+    CHUNK_SIZE = 60000 # Can't buffer entire frame string in memory during join
+    while i < NEW_LEN:
+        frames = []
+        end_idx = min(i+CHUNK_SIZE, NEW_LEN)
+        for val in time_series[i:end_idx]:
+            # Map angles between +/- 40 to +/- 32767. Note that angles outside
+            # +/- 40 will be clipped
+            int_val = int(val * 32767.0 / 40.0)
+            if int_val > 32767:
+                int_val = 32767
+            elif int_val < -32767:
+                int_val = -32767
+            if int_val > 32767 or int_val < -32767:
+                print(val, int_val)
+            frames.append(struct.pack('h', int_val))
+            i+=1
+        frames = b''.join(frames)
+        wavfile.writeframes(frames)
     wavfile.close()
 
 
