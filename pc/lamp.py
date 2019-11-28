@@ -54,6 +54,7 @@ def main():
             args['use_legacy_sign_convention'], \
             args['use_time_stamps'], \
             plot_slice, \
+            args['make_wav'], \
             anim_data
         )
     elif playback_fname:

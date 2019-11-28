@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "args": ["--analyze=oct_13_2019\\lamp_data_0_slice350.00to360.00.dat", "--imu=both"]
+            "args": ["--analyze=oct_13_2019\\lamp_data_0_slice350.00to360.00.dat", "--make_wav=True"]
         }
     ]
 }

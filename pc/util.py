@@ -12,6 +12,7 @@ import struct
 import numpy as np
 import configparser
 import time
+import wave
 
 def logString(userMsg):
     '''
@@ -81,6 +82,14 @@ def parse_args():
              ' full file name (with extension), or "latest" to use the most'
              ' recent .dat.',
         default=''
+    )
+
+    parser.add_argument(
+        '--make_wav',
+        help='(analyze option) If true, makes .wav files from the angle'
+             ' channels. Default: False',
+        type=str2bool,
+        default=False
     )
     
     parser.add_argument(
@@ -957,6 +966,38 @@ def do_file_slice(fname, args):
         for line in bin_data[start_idx:end_idx+1]:
             f.write(line) # Sliced data
     logString("Saved split data to {0}".format(fname_new))
+
+def write_wave(data, fname):
+    '''
+    Outputs the data stream as a .wav file
+    '''
+    fname = os.path.join(fname + ".wav")
+    wavfile = wave.open(fname, "w")
+    nchannels = 1
+    sampwidth = 2 # Number of bytes per sample. Must be consistent with struct pack type
+    framerate = get_sample_rate();
+    nframes = len(data)
+    comptype = "NONE"
+    compname = "not compressed"
+    wavfile.setparams( \
+        (nchannels, sampwidth, framerate, nframes, comptype, compname) \
+    )
+    frames = []
+    for val in data:
+        # Map angles between +/- 40 to +/- 32767. Note that angles outside
+        # +/- 40 will be clipped
+        int_val = int(val * 32767.0 / 45.0)
+        if int_val > 32767:
+            int_val = 32767
+        elif int_val < -32767:
+            int_val = -32767
+        if int_val > 32767 or int_val < -32767:
+            print(val, int_val)
+        frames.append(struct.pack('h', int_val))
+    frames = b''.join(frames)
+    wavfile.writeframes(frames)
+    wavfile.close()
+
 
 class WaitForMs:
     '''

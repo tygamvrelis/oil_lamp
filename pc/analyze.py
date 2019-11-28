@@ -103,7 +103,7 @@ def get_angles(raw_imu_data, num_samples):
 
 def analyze(fname, imu_to_plot, estimate, use_calibration, \
     use_legacy_sign_convention, use_time_stamps, plot_slice, \
-    anim_data):
+    make_wav, anim_data):
     '''
     Visualizes logged data
     --------
@@ -132,6 +132,8 @@ def analyze(fname, imu_to_plot, estimate, use_calibration, \
             time"
         plot_slice : string
             String containing start time and end time to plot between
+        make_wav : bool
+            Indicates whether to make .wav file from angle data
         anim_data : tuple
             3-tuple containing (1) bool indicating whether or not to animate,
             (2) animation type, and (3) animation arguments
@@ -154,6 +156,16 @@ def analyze(fname, imu_to_plot, estimate, use_calibration, \
         use_time_stamps \
     )
     angles = get_angles(imu_data, num_samples)
+
+    if make_wav:
+        # Combine the pitch and roll from each IMU into a single value for each
+        angles[OUTER:INNER+1,:] = angles[BASE_OUTER:BASE_INNER+1,:] + \
+                                  angles[LAMP_OUTER:LAMP_INNER+1,:]
+        fname_base = os.path.splitext(fname)[0]
+        fname = os.path.join(get_data_dir(), fname_base)
+        write_wave(angles[OUTER,:], fname + "_outer")
+        write_wave(angles[INNER,:], fname + "_inner")
+        return
 
     if plot_slice:
         t_start, t_end = plot_slice.split(',')
