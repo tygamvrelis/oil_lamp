@@ -976,14 +976,11 @@ def write_wave(data, fname):
     TARGET_SAMPLE_RATE = 6000 # Hz
     RATE_RATIO = int(TARGET_SAMPLE_RATE / get_sample_rate());
     NEW_LEN = int(RATE_RATIO * len(data))
-    print(NEW_LEN)
-    # Create new time series and add our real samples to it
-    time_series = np.full((NEW_LEN, 1), np.nan)
-    for i in range(len(data)):
-        time_series[i * RATE_RATIO] = data[i]
-    # Interpolate
-    nans, idx = nan_helper(time_series)
-    time_series[nans] = interp1d(idx(nans), idx(~nans), time_series[~nans])
+    from scipy import interpolate
+    x = np.arange(0, len(data), 1)
+    tck = interpolate.splrep(x, data, s=0)
+    xnew = np.arange(0, len(data), 1.0 / RATE_RATIO)
+    time_series = interpolate.splev(xnew, tck, der=0)
 
     fname = os.path.join(fname + ".wav")
     logString("Making audio file " + fname)
