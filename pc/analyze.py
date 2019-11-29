@@ -11,7 +11,6 @@ try:
 except:
     # Raspberry Pi doesn't have matplotlib
     logString("Failed to import matplotlib.pyplot")
-from scipy.interpolate import spline
 
 class cFilt:
     ''' Complementary filter '''
