@@ -1064,11 +1064,11 @@ def load_angles_from_wav(outer_fname, inner_fname):
         assert(num_bytes_read % 2 == 0, "ERROR: impossible to read odd # of bytes from wav")
         num_samples_read = num_bytes_read//2
         num_angles_read = num_samples_read//RATE_RATIO
-        tmp = struct.unpack("<{}h".format(num_samples_read), outer_bytes)
-        angles[OUTER,i:i+num_angles_read] = tmp[::RATE_RATIO]
+        tmp = struct.unpack("<{}h".format(num_samples_read), outer_bytes)[::RATE_RATIO]
+        angles[OUTER,i:i+num_angles_read] = tmp[0:min(len(tmp), num_angles_read)]
 
-        tmp = struct.unpack("<{}h".format(num_samples_read), inner_bytes)
-        angles[INNER,i:i+num_angles_read] = tmp[::RATE_RATIO]
+        tmp = struct.unpack("<{}h".format(num_samples_read), inner_bytes)[::RATE_RATIO]
+        angles[INNER,i:i+num_angles_read] = tmp[0:min(len(tmp), num_angles_read)]
         i += num_angles_read
     wavfile_outer.close()
     wavfile_inner.close()
