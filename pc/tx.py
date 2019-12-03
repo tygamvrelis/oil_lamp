@@ -319,7 +319,10 @@ def playback(port, baud, fname, loop, use_legacy_sign_convention, \
                         tx_cycle.wait()
                         elapsed_time += 1000 / get_sample_rate()
                         if elapsed_time % 1000 == 0:
-                            print(elapsed_time, end="\r")
+                            mm = (elapsed_time / 1000.0) // 60
+                            ss = (elapsed_time / 1000.0) % 60
+                            stot = elapsed_time / 1000.0
+                            print("\t%dm %ds (total: %d s)" % (mm, ss, stot), end="\r")
                     if not loop:
                         return
         except serial.serialutil.SerialException as e:
