@@ -256,16 +256,33 @@ def playback(port, baud, fname, loop, use_legacy_sign_convention, \
         verbose : bool
             Prints additional messages if True
     '''
-    fname = os.path.join(get_data_dir(), fname)
-    logString("Loading data file " + fname)
-    imu_data, num_samples, time_stamps = load_data_from_file(fname, use_calibration=True, use_legacy_sign_convention=use_legacy_sign_convention)
-    t, imu_data, num_samples = make_time_series( \
-        imu_data, \
-        num_samples, \
-        time_stamps, \
-        use_time_stamps \
-    )
-    angles = get_angles(imu_data, num_samples)
+    ext = os.path.splitext(fname)[1]
+    if ext == ".dat":
+        fname = os.path.join(get_data_dir(), fname)
+        logString("Loading data file " + fname)
+        imu_data, num_samples, time_stamps = load_data_from_file( \
+            fname, \
+            use_calibration=True, \
+            use_legacy_sign_convention=use_legacy_sign_convention \
+        )
+        t, imu_data, num_samples = make_time_series( \
+            imu_data, \
+            num_samples, \
+            time_stamps, \
+            use_time_stamps \
+        )
+        angles = get_angles(imu_data, num_samples)
+    elif ext == ".wav":
+        base_name = os.path.splitext(fname)[0]
+        outer_name = os.path.join(get_data_dir(), base_name + "_outer.wav")
+        inner_name = os.path.join(get_data_dir(), base_name + "_inner.wav")
+        logString("Loading data files:")
+        logString("\t" + outer_name)
+        logString("\t" + inner_name)
+        angles = load_angles_from_wav(outer_name, inner_name);
+    else:
+        logString("Unknown file extension \"{}\"".format(ext))
+        return
     
     logString(list_ports())
     logString("Attempting connection to embedded")
@@ -275,7 +292,7 @@ def playback(port, baud, fname, loop, use_legacy_sign_convention, \
     tx_cycle = WaitForMs(10) # 10 ms wait between angle transmissions
     tx_cycle.set_e_gain(1.5)
     tx_cycle.set_e_lim(0, -3.0) # Never wait longer, but allow down to 3 ms less
-    
+
     num_tries = 0
     while True:
         try:
@@ -287,14 +304,25 @@ def playback(port, baud, fname, loop, use_legacy_sign_convention, \
                 else:
                     logString("Looping is disabled...will quit after sending all angles")
                 while True:
+                    elapsed_time = 0
                     for angle_vec in angles.T:
-                        outer_angle = angle_vec[BASE_OUTER] + angle_vec[LAMP_OUTER]
-                        inner_angle = angle_vec[BASE_INNER] + angle_vec[LAMP_INNER]
+                        if ext == ".dat":
+                            outer_angle = angle_vec[BASE_OUTER] + angle_vec[LAMP_OUTER]
+                            inner_angle = angle_vec[BASE_INNER] + angle_vec[LAMP_INNER]
+                        elif ext == ".wav":
+                            outer_angle = angle_vec[OUTER]
+                            inner_angle = angle_vec[INNER]
                         if verbose:
                             logString("Outer: {0}|Inner: {1}".format(outer_angle, inner_angle))
                         # Send angles and wait a few ms before sending again
                         transmit_angles(ser, outer_angle, inner_angle)
                         tx_cycle.wait()
+                        elapsed_time += 1000 / get_sample_rate()
+                        if elapsed_time % 1000 == 0:
+                            mm = (elapsed_time / 1000.0) // 60
+                            ss = (elapsed_time / 1000.0) % 60
+                            stot = elapsed_time / 1000.0
+                            print("\t%dm %ds (total: %d s)" % (mm, ss, stot), end="\r")
                     if not loop:
                         return
         except serial.serialutil.SerialException as e:
