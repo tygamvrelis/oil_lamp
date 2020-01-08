@@ -109,3 +109,4 @@ RemoteSystemsTempFiles/
 *.snap
 *.resources
 *.xmi
+Untracked/*
