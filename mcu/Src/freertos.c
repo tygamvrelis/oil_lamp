@@ -310,9 +310,12 @@ void StartRxTask(void const * argument)
         CMD_CTRL_EN = '1',
         CMD_SENS_DI = '2',
         CMD_SENS_EN = '3',
+        CMD_ZERO_REF = 'Z',
+        CMD_ZERO_REF_OUTER = 'O',
+        CMD_ZERO_REF_INNER = 'I',
         CMD_ANGLE = 'A',
-        CMD_ANGLE_OUTER,
-        CMD_ANGLE_INNER
+        CMD_ANGLE_OUTER = '8', // Exact value doesn't matter, just has to be
+        CMD_ANGLE_INNER = '9'  // unique (these are used as parse states only)
     } parse_state = CMD_NONE;
 
     MX_WWDG_Init();
@@ -335,6 +338,11 @@ void StartRxTask(void const * argument)
                     else if ((char)data == (char)CMD_ANGLE)
                     {
                         parse_state = CMD_ANGLE;
+                        cnt = 0;
+                    }
+                    else if ((char)data == (char)CMD_ZERO_REF)
+                    {
+                        parse_state = CMD_ZERO_REF;
                         cnt = 0;
                     }
                     else if ((char)data == (char)CMD_CTRL_DI)
@@ -389,6 +397,37 @@ void StartRxTask(void const * argument)
                     {
                         write_table(
                             TABLE_IDX_INNER_GIMBAL_ANGLE,
+                            (uint8_t*)&tmp_angle,
+                            sizeof(float)
+                        );
+                        parse_state = CMD_NONE;
+                        cnt = 0;
+                    }
+                    break;
+                case CMD_ZERO_REF:
+                    parse_state = CMD_ZERO_REF_OUTER;
+                    break;
+                case CMD_ZERO_REF_OUTER:
+                    ((uint8_t*)&tmp_angle)[cnt] = data;
+                    ++cnt;
+                    if (cnt == sizeof(float))
+                    {
+                        write_table(
+                            TABLE_IDX_ZERO_REF_OUTER_GIMBAL,
+                            (uint8_t*)&tmp_angle,
+                            sizeof(float)
+                        );
+                        parse_state = CMD_ZERO_REF_INNER;
+                        cnt = 0;
+                    }
+                    break;
+                case CMD_ZERO_REF_INNER:
+                    ((uint8_t*)&tmp_angle)[cnt] = data;
+                    ++cnt;
+                    if (cnt == sizeof(float))
+                    {
+                        write_table(
+                            TABLE_IDX_ZERO_REF_INNER_GIMBAL,
                             (uint8_t*)&tmp_angle,
                             sizeof(float)
                         );
@@ -521,7 +560,7 @@ void StartControlTask(void const * argument)
     static const uint32_t CONTROL_CYCLE_TIME = osKernelSysTickMicroSec(CONTROL_CYCLE_MS * 1000);
     static const float MIN_GIMBAL_ANGLE = -40.0;
     static const float MAX_GIMBAL_ANGLE = 40.0;
-    float a_outer, a_inner;
+    float a_outer, a_inner, zero_ref_outer, zero_ref_inner;
 
     lss_set_io_type(IO_DMA);
 
@@ -566,6 +605,12 @@ void StartControlTask(void const * argument)
         // Make sure we don't move the servos to angles outside these bounds
         a_outer = bound_float(a_outer, MIN_GIMBAL_ANGLE, MAX_GIMBAL_ANGLE);
         a_inner = bound_float(a_inner, MIN_GIMBAL_ANGLE, MAX_GIMBAL_ANGLE);
+
+        // Translate origin to our reference point
+        read_table(TABLE_IDX_ZERO_REF_OUTER_GIMBAL, (uint8_t*)&zero_ref_outer, sizeof(float));
+        read_table(TABLE_IDX_ZERO_REF_INNER_GIMBAL, (uint8_t*)&zero_ref_inner, sizeof(float));
+        a_outer -= zero_ref_outer;
+        a_inner -= zero_ref_inner;
 
         // Update motor angles
         lss_set_position(&servo_outer, a_outer);
