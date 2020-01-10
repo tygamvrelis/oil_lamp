@@ -609,8 +609,8 @@ void StartControlTask(void const * argument)
         // Translate origin to our reference point
         read_table(TABLE_IDX_ZERO_REF_OUTER_GIMBAL, (uint8_t*)&zero_ref_outer, sizeof(float));
         read_table(TABLE_IDX_ZERO_REF_INNER_GIMBAL, (uint8_t*)&zero_ref_inner, sizeof(float));
-        a_outer -= zero_ref_outer;
-        a_inner -= zero_ref_inner;
+        a_outer += zero_ref_outer;
+        a_inner += zero_ref_inner;
 
         // Update motor angles
         lss_set_position(&servo_outer, a_outer);

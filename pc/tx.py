@@ -89,7 +89,7 @@ def send_servo_angles(port, baud, angles):
         else:
             logString("Serial exception")
 
-def send_reference_point_update():
+def send_reference_point_update(port, baud, angles):
     '''
     Sends a command to the microcontroller to set the origin (zero reference
     point) for the servos to the specified angles.

@@ -20,6 +20,7 @@ def main():
     playback_fname = args['playback']
     baseline_fname = args['set_baseline']
     angles = args['set_angles']
+    origin_angles = args['update_origin']
     sine_params = args['sine']
     plot_slice = args['plot_slice']
     use_servos = args['use_servos']
@@ -74,6 +75,9 @@ def main():
     elif sine_params:
         logString("Sending sine wave")
         send_sine_wave(port, baud, sine_params, args['servo'], verbose)
+    elif origin_angles:
+        logString("Updating origin location")
+        send_reference_point_update(port, baud, origin_angles)
     elif use_servos != None:
         change_servo_usage(port, baud, use_servos)
     elif use_imus != None:
