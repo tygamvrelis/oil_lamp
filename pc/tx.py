@@ -89,6 +89,61 @@ def send_servo_angles(port, baud, angles):
         else:
             logString("Serial exception")
 
+def send_reference_point_update(port, baud, angles):
+    '''
+    Sends a command to the microcontroller to set the origin (zero reference
+    point) for the servos to the specified angles.
+    --------
+    Arguments:
+        port : serial.Serial
+            COM port that MCU is connected to
+        baud : int
+            Symbol rate over COM port
+        angles : string
+            string of the form "outer_gimbal_ref,inner_gimbal_ref",
+            e.g. "-10,7". Arguments may be positive or negative.
+    '''
+    has_sep=False
+    if "," in angles:
+        has_sep=True
+
+    if has_sep:
+        a_outer, a_inner = angles.split(",")
+        try:
+            a_outer = float(a_outer)
+        except ValueError:
+            a_outer = 0
+        try:
+            a_inner = float(a_inner)
+        except ValueError:
+            a_inner = 0
+    else:
+        try:
+            a_outer = float(angles)
+        except ValueError:
+            a_outer = 0
+        a_inner = 0
+    
+    logString(list_ports())
+    logString("Attempting connection to embedded")
+    logString("\tPort: " + port)
+    logString("\tBaud rate: " + str(baud))
+    
+    try:
+        with serial.Serial(port, baud, timeout=0) as ser:
+            cmd_id = CMD_ZERO_REF.encode()
+            payload = struct.pack('<f', a_outer) + struct.pack('<f', a_inner)
+            packet = cmd_id + payload
+            ser.write(packet)
+        logString("Updated origin to: (outer, inner) = ({0}, {1})".format(
+            np.round(a_outer,2),  np.round(a_inner,2))
+        )
+    except serial.serialutil.SerialException as e:
+        if(str(e).find("FileNotFoundError")):
+            logString("Port not found")
+        else:
+            logString("Serial exception")
+
 def change_servo_usage(port, baud, use_servos):
     '''
     Sends a command to the MCU to enable or disable servo usage

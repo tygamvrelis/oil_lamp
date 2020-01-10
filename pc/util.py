@@ -204,6 +204,20 @@ def parse_args():
              ' of 2 at time t=ln(2)/1 = 0.693 seconds',
         default=''
     )
+
+    parser.add_argument(
+        '--update_origin',
+        help='Sets the origin (zero reference point) for the servos to the'
+             ' specified angles. This can be used to change the operation of'
+             ' the lamp from wall-mounted mode to floor-mounted mode, and so'
+             ' on. Example: --update_origin=0,0 will remove any origin '
+             ' translation previously applied. Example: --update_origin=10,-10'
+             ' will cause the servo on the outer gimbal to treat a +10 degree'
+             ' deflection as 0 degrees, and the sero on the inner gimbal to'
+             ' treat a -10 degree deflection as 0 degrees. NOTE: this setting'
+             ' does NOT persist between power cycles, and is 0 by default',
+        default=''
+    )
     
     parser.add_argument(
         '--servo',
@@ -304,6 +318,7 @@ CMD_CTRL_EN = '1'
 CMD_SENS_DI = '2'
 CMD_SENS_EN = '3'
 CMD_ANGLE = 'A'
+CMD_ZERO_REF = 'Z'
 def enable_servos(ser):
     '''
     Sends the MCU a command to enable servo actuation
