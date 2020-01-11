@@ -213,7 +213,7 @@ def parse_args():
              ' on. Example: --update_origin=0,0 will remove any origin '
              ' translation previously applied. Example: --update_origin=10,-10'
              ' will cause the servo on the outer gimbal to treat a +10 degree'
-             ' deflection as 0 degrees, and the sero on the inner gimbal to'
+             ' deflection as 0 degrees, and the servo on the inner gimbal to'
              ' treat a -10 degree deflection as 0 degrees. NOTE: this setting'
              ' does NOT persist between power cycles, and is 0 by default',
         default=''
