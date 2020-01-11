@@ -566,8 +566,8 @@ void StartControlTask(void const * argument)
 
     const int8_t ANGULAR_STIFFNESS = -4;
     const int8_t HOLDING_STIFFNESS = -4;
-    const uint8_t OUTER_ID = 1;
-    const float OUTER_OFFSET = 49;
+    const uint8_t OUTER_ID = 0;
+    const float OUTER_OFFSET = -102;
     const uint16_t AA = 1000;
     const uint16_t AD = 1000;
     lss_t servo_outer = {OUTER_ID, &huart1, OUTER_OFFSET};
@@ -579,8 +579,8 @@ void StartControlTask(void const * argument)
     lss_set_as(&servo_outer, ANGULAR_STIFFNESS);
     lss_set_hs(&servo_outer, HOLDING_STIFFNESS);
 
-    const uint8_t INNER_ID = 0;
-    const float INNER_OFFSET = -102;
+    const uint8_t INNER_ID = 1;
+    const float INNER_OFFSET = 49;
     lss_t servo_inner = {INNER_ID, &huart1, INNER_OFFSET};
     lss_set_led(&servo_inner, LSS_OFF);
     lss_toggle_motion_ctrl(&servo_inner, LSS_EM0);

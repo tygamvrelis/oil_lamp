@@ -131,6 +131,7 @@ def send_reference_point_update(port, baud, angles):
     
     try:
         with serial.Serial(port, baud, timeout=0) as ser:
+            enable_servos(ser)
             cmd_id = CMD_ZERO_REF.encode()
             payload = struct.pack('<f', a_outer) + struct.pack('<f', a_inner)
             packet = cmd_id + payload
