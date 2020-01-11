@@ -5,6 +5,7 @@
 import numpy as np
 import glob
 from util import *
+from filters import cFilt
 try:
     import animate as anim
 except:
@@ -14,66 +15,6 @@ try:
 except:
     # Raspberry Pi doesn't have matplotlib
     logString("Failed to import matplotlib.pyplot")
-
-class cFilt:
-    ''' Complementary filter '''
-    def __init__(self, alpha_p, alpha_r, theta_p=0, theta_r=0, verbose=False):
-        '''
-        Initializes the filter. Alpha is the factor that weighs the velocity
-        integral term, and 1-alpha is the factor that weighs the acceleration
-        term. Generally, large alpha is desired so that the velocity term is
-        primarily used while the acceleration term corrects drift.
-        --------
-        Arguments
-            alpha_p : double
-                Pitch (outer gimbal) weighting
-            alpha_r : double
-                Roll (inner gimbal) weighting
-            theta_p : double
-                Initial pitch
-            theta_r : double
-                Initial roll
-            verbose : bool
-                Prints debug messages if True
-        '''
-        self.__alpha_p = alpha_p
-        self.__theta_p = theta_p
-        self.__alpha_r = alpha_r
-        self.__theta_r = theta_r
-        self.__verbose = verbose
-    
-    def update(self, v, a, dt):
-        '''
-        Updates the angle estimates.
-        --------
-        Arguments
-            v : np.ndarray
-                A 3-vector containing vz, vy, vx
-            a : np.ndarray
-                A 3-vector containing az, ay, ax
-            dt : double
-                Sampling period in milliseconds
-        '''
-        if self.__verbose:
-            print(v[0:3], a[0:3])
-
-        # Outer gimbal angle (pitch)
-        a_term = (1.0 - self.__alpha_p) * np.arctan2(a[X_IDX], -a[Z_IDX]) * 180.0 / np.pi
-        v_term = self.__alpha_p * (self.__theta_p + v[Y_IDX] * (dt / 1000.0))
-        self.__theta_p = v_term + a_term
-        
-        # Inner gimbal angle (roll)
-        a_term = (1.0 - self.__alpha_r) * np.arctan2(-a[Y_IDX], -a[Z_IDX]) * 180.0 / np.pi
-        v_term = self.__alpha_r * (self.__theta_r + v[X_IDX] * (dt / 1000.0))
-        self.__theta_r = v_term + a_term
-        
-        return self.__theta_p, self.__theta_r
-        
-    def theta(self):
-        '''
-        Gets the pitch and roll angles
-        '''
-        return self.__theta_p, self.__theta_r
 
 def get_angles(raw_imu_data, num_samples):
     '''
