@@ -324,11 +324,12 @@ class NetworkedReceiver:
     Methods for receiving data over the internet, and safely sharing it between
     threads
     '''
-    def __init__(self):
+    def __init__(self, dryrun):
         self.__imu_data = np.zeros(IMU_BUF_SIZE) + float('inf')
         self.__lock = Lock()
         self.__stop_event = Event()
         self.__last_seq_num = float('-inf')
+        self.__dryrun = dryrun
 
     def stop(self):
         '''
@@ -352,23 +353,24 @@ class NetworkedReceiver:
         '''
         Loop for receiving raw data over network
         '''
-        base_filt, lamp_filt = make_complementary_filters()
         while(1):
             if self.__stop_requested():
                 break
             ready = select.select([sock], [], [], 1.0 / get_sample_rate())
             if ready[0]:
-                packet = sock.recvfrom(BUF_SIZE)
+                packet, (clt_ip, clt_port) = sock.recvfrom(BUF_SIZE_INET)
                 # We use a sequence number so that if any old packets arrive at
                 # a later time (out of order) we know to discard them
                 seq_num, imu_data = decode_data_inet(packet)
+                if self.__dryrun:
+                    print(imu_data)
                 if seq_num > self.__last_seq_num and self.__lock.acquire(True):
                     self.__imu_data = imu_data
                     self.__lock.release()
                     self.__last_seq_num = seq_num
 
 
-def playback_networked(port, baud, udp_port, verbose):
+def playback_networked(port, baud, udp_port, verbose, dryrun):
     '''
     Initiates playback mode for data received over the internet
     
@@ -382,6 +384,8 @@ def playback_networked(port, baud, udp_port, verbose):
             The UDP port that the program will listen to for data
         verbose : bool
             Prints additional messages if True
+        dryrun : bool
+            Prints received angles and bypasses MCU connection
     '''
     bind_ip = '' # All addresses
     bind_port = udp_port
@@ -397,55 +401,81 @@ def playback_networked(port, baud, udp_port, verbose):
         ip, udp_port_str = sock.getsockname()
         logString("Receiver listening on {0}:{1} (UDP)".format(ip, udp_port_str))
         
-        logString(list_ports())
-        logString("Attempting connection to embedded")
-        logString("\tPort: " + port)
-        logString("\tBaud rate: " + str(baud))
+        if not dryrun:
+            logString(list_ports())
+            logString("Attempting connection to embedded")
+            logString("\tPort: " + port)
+            logString("\tBaud rate: " + str(baud))
+        else:
+            logString("Dryrun -- bypassing connection to embedded")
         
         tx_cycle = WaitForMs(10) # 10 ms wait between angle transmissions
         tx_cycle.set_e_gain(1.5)
         tx_cycle.set_e_lim(0, -3.0) # Never wait longer, but allow down to 3 ms less
+
+        base_filt, lamp_filt = make_complementary_filters()
         
         num_tries = 0
-        nr = NetworkedReceiver()
+        nr = NetworkedReceiver(dryrun)
         recv_thread = Thread(
             name="NetworkReceiver", target=nr.recv_loop, args=(sock, )
         )
         recv_thread.start()
         try:
             while True:
-                try:
-                    with serial.Serial(port, baud, timeout=0) as ser:
-                        logString("Connected")
-                        enable_servos(ser)
-                        angles = np.zeros(shape=(4, 1))
-                        while True:
-                            imu_data = nr.get_latest_imu_data()
-                            angles[BASE_OUTER:BASE_INNER+1] = base_filt.update(
-                                imu_data[IMU_BASE_IDX + GYRO_IDX:],
-                                imu_data[IMU_BASE_IDX + ACC_IDX:],
-                                1000.0 / get_sample_rate()
-                            )
-                            angles[LAMP_OUTER:LAMP_INNER+1] = lamp_filt.update(
-                                imu_data[IMU_LAMP_IDX + GYRO_IDX:],
-                                imu_data[IMU_LAMP_IDX + ACC_IDX:],
-                                1000.0 / get_sample_rate()
-                            )
-                            outer_angle = angles[BASE_OUTER] + angles[LAMP_OUTER]
-                            inner_angle = angles[BASE_INNER] + angles[LAMP_INNER]
-                            if verbose:
-                                logString("Outer: {0}|Inner: {1}".format(outer_angle, inner_angle))
-                            # Send angles and wait a few ms before sending again
-                            transmit_angles(ser, outer_angle, inner_angle)
-                            tx_cycle.wait()
-                except serial.serialutil.SerialException as e:
-                    if(num_tries % 100 == 0):
-                        if(str(e).find("FileNotFoundError")):
-                            logString("Port not found. Retrying...(attempt {0})".format(num_tries))
-                        else:
-                            logString("Serial exception. Retrying...(attempt {0})".format(num_tries))
-                    time.sleep(0.01)
-                    num_tries = num_tries + 1
+                if not dryrun:
+                    try:
+                        with serial.Serial(port, baud, timeout=0) as ser:
+                            logString("Connected")
+                            enable_servos(ser)
+                            angles = np.zeros(shape=(4, 1))
+                            while True:
+                                imu_data = nr.get_latest_imu_data()
+                                angles[BASE_OUTER:BASE_INNER+1] = base_filt.update(
+                                    imu_data[IMU_BASE_IDX + GYRO_IDX:],
+                                    imu_data[IMU_BASE_IDX + ACC_IDX:],
+                                    1000.0 / get_sample_rate()
+                                )
+                                angles[LAMP_OUTER:LAMP_INNER+1] = lamp_filt.update(
+                                    imu_data[IMU_LAMP_IDX + GYRO_IDX:],
+                                    imu_data[IMU_LAMP_IDX + ACC_IDX:],
+                                    1000.0 / get_sample_rate()
+                                )
+                                outer_angle = angles[BASE_OUTER] + angles[LAMP_OUTER]
+                                inner_angle = angles[BASE_INNER] + angles[LAMP_INNER]
+                                if verbose:
+                                    logString("Outer: {0}|Inner: {1}".format(outer_angle, inner_angle))
+                                # Send angles and wait a few ms before sending again
+                                transmit_angles(ser, outer_angle, inner_angle)
+                                tx_cycle.wait()
+                    except serial.serialutil.SerialException as e:
+                        if(num_tries % 100 == 0):
+                            if(str(e).find("FileNotFoundError")):
+                                logString("Port not found. Retrying...(attempt {0})".format(num_tries))
+                            else:
+                                logString("Serial exception. Retrying...(attempt {0})".format(num_tries))
+                        time.sleep(0.01)
+                        num_tries = num_tries + 1
+                else:
+                    angles = np.zeros(shape=(4, 1))
+                    while True:
+                        continue # Todo: wait until we get a buffer of data (e.g. 1 msg for now)
+                    while True:
+                        imu_data = nr.get_latest_imu_data()
+                        angles[BASE_OUTER:BASE_INNER+1] = base_filt.update(
+                            imu_data[IMU_BASE_IDX + GYRO_IDX:],
+                            imu_data[IMU_BASE_IDX + ACC_IDX:],
+                            1000.0 / get_sample_rate()
+                        )
+                        angles[LAMP_OUTER:LAMP_INNER+1] = lamp_filt.update(
+                            imu_data[IMU_LAMP_IDX + GYRO_IDX:],
+                            imu_data[IMU_LAMP_IDX + ACC_IDX:],
+                            1000.0 / get_sample_rate()
+                        )
+                        outer_angle = angles[BASE_OUTER] + angles[LAMP_OUTER]
+                        inner_angle = angles[BASE_INNER] + angles[LAMP_INNER]
+                        logString("Outer: {0}|Inner: {1}".format(outer_angle, inner_angle))
+                        tx_cycle.wait()
         except KeyboardInterrupt as e:
             nr.stop()
             recv_thread.join()

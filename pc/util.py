@@ -89,6 +89,17 @@ def parse_args():
     )
 
     parser.add_argument(
+        '--inet_dryrun',
+        help='(network option) Bypasses the microcontroller connection to help'
+             ' test the networking modules. Using this option will cause RX to'
+             ' print the received angles instead of transmitting to the MCU, '
+             ' and TX to generate a some data instead of receiving angle'
+             ' measuremnets from the MCU',
+        type=str2bool,
+        default=False
+    )
+
+    parser.add_argument(
         '--ip_addr',
         help='(network option, record mode) Specifies the IP address of the '
              ' remote receiver. Must be IPv4, dotted decimal notation.',
@@ -399,7 +410,7 @@ def get_status_byte(buff):
     '''
     Gets the part of the buffer containing the status byte
     '''
-    return buff[-1]
+    return buff[-1:]
     
 def decode_data(buff):
     '''
@@ -422,7 +433,7 @@ def decode_data_inet(buff):
     '''
     assert(len(buff) == BUF_SIZE_INET), "Length is {0}".format(len(buff))
     imu_data = decode_data(buff[0:BUF_SIZE])
-    seq_number = struct.unpack("<L", buff[BUF_SIZE:])
+    seq_number = struct.unpack("<L", buff[BUF_SIZE:])[0]
     return seq_number, imu_data
 
 def decode_status(buff):

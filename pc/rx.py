@@ -8,6 +8,7 @@ import serial
 import os
 import struct
 import numpy as np
+import socket
 from prettytable import PrettyTable
 from util import *
     
@@ -54,9 +55,9 @@ def log_data(file, buff):
     status = decode_status(buff)
     data_to_write = datetime.now().strftime('%H:%M:%S.%f')[:-3] + " "
     data_to_write = data_to_write + "stat=" + str(status) + " "
-    file.write(data_to_write.encoder()) # Human-readable text, for time + flags
+    file.write(data_to_write.encode()) # Human-readable text, for time + flags
     file.write(get_imu_bytes(buff)) # Binary data. 96% of file if written as str
-    file.write("\n")
+    file.write("\n".encode())
     if log_data.n > 0 and log_data.n % 10 == 0:
         file.flush()
         os.fsync(file)
@@ -165,7 +166,7 @@ def record(port, baud, verbose):
                 time.sleep(0.01)
                 num_tries = num_tries + 1
 
-def record_networked(port, baud, ip_addr, udp_port, verbose):
+def record_networked(port, baud, ip_addr, udp_port, verbose, dryrun):
     '''
     Initiates recording mode and sends data over the internet to a playback
     entity
@@ -181,8 +182,10 @@ def record_networked(port, baud, ip_addr, udp_port, verbose):
             The UDP port that the playback entity is listening to for data
         verbose : bool
             Prints additional messages if True
+        dryrun : bool
+            Generates a sine wave instead of receiving angle measurements from
+            MCU
     '''
-    logString(list_ports())
     make_data_dir()
     
     fname = get_log_file_name()
@@ -190,35 +193,70 @@ def record_networked(port, baud, ip_addr, udp_port, verbose):
     first = True
     with open(fname, 'wb') as f:
         log_preamble(f)
-        logString("Attempting connection to embedded")
-        logString("\tPort: " + port)
-        logString("\tBaud rate: " + str(baud))
+        if not dryrun:
+            logString(list_ports())
+            logString("Attempting connection to embedded")
+            logString("\tPort: " + port)
+            logString("\tBaud rate: " + str(baud))
+        else:
+            logString("Dryrun -- bypassing connection to embedded")
         
         num_tries = 0
         seq_num = 0
         while True:
-            try:
-                with serial.Serial(port, baud, timeout=0) as ser:
-                    logString("Connected")
-                    enable_imus(ser)
-                    if first:
-                        first = False
-                        ser.write(CMD_BLINK.encode()) # L => flash LED
-                    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-                        print("Sending UDP packets to {0}:{1}".format(ip_addr, udp_port)) 
-                        while True:
-                            success, buff = receive(ser)
-                            if success:
-                                buff_inet = buff + struct.pack("<L", seq_num)
-                                assert(buff_inet == BUF_SIZE_INET), "Length is {0}".format(len(buff_inet))
-                                sock.sendto(buff_inet, (ip_addr, udp_port))
-                                seq_num += 1
-                                log_data(f, buff)
-            except serial.serialutil.SerialException as e:
-                if(num_tries % 100 == 0):
-                    if(str(e).find("FileNotFoundError")):
-                        logString("Port not found. Retrying...(attempt {0})".format(num_tries))
-                    else:
-                        logString("Serial exception. Retrying...(attempt {0})".format(num_tries))
-                time.sleep(0.01)
-                num_tries = num_tries + 1
+            if not dryrun:
+                try:
+                    with serial.Serial(port, baud, timeout=0) as ser:
+                        logString("Connected")
+                        enable_imus(ser)
+                        if first:
+                            first = False
+                            ser.write(CMD_BLINK.encode()) # L => flash LED
+                            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+                                print("Sending UDP packets to {0}:{1}".format(ip_addr, udp_port)) 
+                                while True:
+                                    buff = send_over_network(sock, ip_addr, udp_port, seq_num, ser)
+                                    log_data(f, buff)
+                                    seq_num += 1
+                except serial.serialutil.SerialException as e:
+                    if(num_tries % 100 == 0):
+                        if(str(e).find("FileNotFoundError")):
+                            logString("Port not found. Retrying...(attempt {0})".format(num_tries))
+                        else:
+                            logString("Serial exception. Retrying...(attempt {0})".format(num_tries))
+                    time.sleep(0.01)
+                    num_tries = num_tries + 1
+            else:
+                with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+                    print("Sending UDP packets to {0}:{1}".format(ip_addr, udp_port)) 
+                    while True:
+                        buff = send_over_network(sock, ip_addr, udp_port, seq_num, None)
+                        seq_num += 1
+                        log_data(f, buff)
+
+def make_test_packet():
+    buff = bytes(''.encode())
+    # Add test pattern
+    for i in range(2):
+        for j in range(6):
+            val = (i * 6) + j + 0.5
+            buff += struct.pack('<f', val)
+    buff += b'0' # Status
+    assert(len(buff) == BUF_SIZE), \
+        "Expected buff length {}, got {}".format(BUF_SIZE, len(buff))
+    return buff
+
+def send_over_network(sock, ip_addr, udp_port, seq_num, ser):
+    if ser == None:
+        # Dryrun!
+        success = True
+        buff = make_test_packet()
+        time.sleep(1.0 / get_sample_rate())
+    else:
+        success, buff = receive(ser)
+    if success:
+        buff_inet = buff + struct.pack("<L", seq_num)
+        assert(len(buff_inet) == BUF_SIZE_INET), \
+            "Length is {}, expected {}".format(len(buff_inet), BUF_SIZE_INET)
+        sock.sendto(buff_inet, (ip_addr, udp_port))
+    return buff

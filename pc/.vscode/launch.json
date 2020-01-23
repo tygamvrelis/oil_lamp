@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "args": ["--analyze=oct_13_2019\\lamp_data_0_slice350.00to360.00.dat", "--imu=both"]
+            "args": ["--network=True", "--udp_port=50101", "--ip_addr=25.72.174.17", "--inet_dryrun=True"]
         }
     ]
 }

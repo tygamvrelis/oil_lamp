@@ -17,6 +17,7 @@ def main():
     record_mode = args['record']
     analyze_fname = args['analyze']
     is_networked = args['network']
+    is_inet_dryrun = args['inet_dryrun']
     ip_addr = args['ip_addr']
     udp_port = args['udp_port']
     animate_str = args['animate']
@@ -37,6 +38,8 @@ def main():
         logString("2 or more of: playback, analyze, set_baseline were selected."
                   " Please only choose one of these")
         quit()
+    if playback_fname:
+        record_mode = False
     if plot_slice:
         validate_slice_args("plot_slice", plot_slice)
     if file_slice:
@@ -79,7 +82,13 @@ def main():
                 verbose \
             )
         else:
-            playback_networked(port, baud, udp_port, verbose)
+            playback_networked( \
+                port, \
+                baud, \
+                udp_port, \
+                verbose, \
+                is_inet_dryrun \
+            )
     elif angles:
         logString("Setting servo angles")
         send_servo_angles(port, baud, angles)
@@ -104,7 +113,14 @@ def main():
         if not is_networked:
             record(port, baud, verbose)
         else:
-            record_networked(port, baud, ip_addr, udp_port, verbose)
+            record_networked( \
+                port, \
+                baud, \
+                ip_addr, \
+                udp_port, \
+                verbose, \
+                is_inet_dryrun \
+            )
     else:
         logString("No option selected")
 
