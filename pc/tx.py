@@ -330,6 +330,7 @@ class NetworkedReceiver:
         self.__stop_event = Event()
         self.__last_seq_num = float('-inf')
         self.__dryrun = dryrun
+        self.__cnt = 0
 
     def stop(self):
         '''
@@ -362,8 +363,10 @@ class NetworkedReceiver:
                 # We use a sequence number so that if any old packets arrive at
                 # a later time (out of order) we know to discard them
                 seq_num, imu_data = decode_data_inet(packet)
-                if self.__dryrun:
-                    print(imu_data)
+                self.__cnt += 1
+                if self.__dryrun and (self.__cnt % 10 == 0):
+                    logString(str(imu_data))
+                    sock.sendto(str(self.__cnt).encode(), (clt_ip, clt_port))
                 if seq_num > self.__last_seq_num and self.__lock.acquire(True):
                     self.__imu_data = imu_data
                     self.__lock.release()
