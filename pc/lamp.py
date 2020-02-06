@@ -6,8 +6,8 @@ import os
 import sys
 import numpy as np
 from util import *
-from rx import record, record_networked
-from tx import *
+from record import record, record_networked
+from playback import *
 from analyze import analyze
 
 def main():

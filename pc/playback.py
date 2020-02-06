@@ -1,4 +1,4 @@
-# Transmission of logged data for actuation
+# Controls servo actuation via logged or streamed data
 # Author: Tyler
 # Data: June 28, 2019
 

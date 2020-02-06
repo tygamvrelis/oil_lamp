@@ -1,4 +1,4 @@
-# Reception & logging of data
+# MCU data reception and logging. Network streaming source
 # Author: Tyler
 # Data: May 12, 2019
 
