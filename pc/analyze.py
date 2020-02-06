@@ -5,11 +5,14 @@
 import numpy as np
 import glob
 from util import *
-import animate as anim
+try:
+    import animate as anim
+except:
+    logString("Failed to import animation library (do you have OpenCV installed?)")
 try:
     import matplotlib.pyplot as plt
 except:
-    # Raspberry Pi doesn't have matplotlib
+    # Computer doesn't have matplotlib
     logString("Failed to import matplotlib.pyplot")
 from scipy.interpolate import spline
 
