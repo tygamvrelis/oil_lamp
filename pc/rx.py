@@ -9,6 +9,7 @@ import os
 import struct
 import numpy as np
 import socket
+import select
 from prettytable import PrettyTable
 from util import *
     
@@ -228,11 +229,19 @@ def record_networked(port, baud, ip_addr, udp_port, verbose, dryrun):
                     num_tries = num_tries + 1
             else:
                 with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-                    print("Sending UDP packets to {0}:{1}".format(ip_addr, udp_port)) 
+                    logString("Sending UDP packets to {0}:{1}".format(ip_addr, udp_port))
+                    sock.setblocking(False)
                     while True:
                         buff = send_over_network(sock, ip_addr, udp_port, seq_num, None)
                         seq_num += 1
                         log_data(f, buff)
+
+                        try:
+                            # Check if any packets from playback device...if so, decode
+                            packet, (clt_ip, clt_port) = sock.recvfrom(65535)
+                            logString("Playback sent: " + packet.decode())
+                        except:
+                            pass
 
 def make_test_packet():
     buff = bytes(''.encode())
