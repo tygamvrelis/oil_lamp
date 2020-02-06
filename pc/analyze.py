@@ -14,7 +14,10 @@ try:
 except:
     # Computer doesn't have matplotlib
     logString("Failed to import matplotlib.pyplot")
-from scipy.interpolate import spline
+try:
+    from scipy.interpolate import spline
+except:
+    logString("Failed to import scipy.interpolate");
 
 class cFilt:
     ''' Complementary filter '''
