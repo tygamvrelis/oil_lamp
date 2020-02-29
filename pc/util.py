@@ -13,6 +13,7 @@ import numpy as np
 import configparser
 import time
 import wave
+import csv
 
 def logString(userMsg):
     '''
@@ -74,6 +75,14 @@ def parse_args():
         help='Records raw data to a file if True. Default: True',
         type=str2bool,
         default=True
+    )
+
+    parser.add_argument(
+        '--csv2wav',
+        help='Converts simulation data from .csv to .wav. Must specify the'
+             ' full file name with extension, e.g. '
+             ' --csv2wav=simulations/simlog1.csv',
+        default=''
     )
     
     parser.add_argument(
@@ -678,6 +687,14 @@ def load_bin_data(file_name):
         bin_data = f.readlines() # Files shouldn't be more than a few Mb max
     return bin_data
 
+def is_simulation_data(fname):
+    '''
+    Returns true if the file is assumed to correspond to simulation data,
+    otherwise false
+    '''
+    basename, ext = os.path.splitext(fname)
+    return ext == ".csv"
+
 def get_data_start_idx(bin_data):
     '''
     Finds the first line containing data. Previous lines may contain a preamble
@@ -732,6 +749,40 @@ def perform_newline_adjustment(bin_data):
         del bin_data[index]
     num_samples = len(bin_data)
     return bin_data, num_samples
+
+def load_simulation_data_from_csv(fname):
+    '''
+    Loads pitch, roll and time stamps from a simulation file in .csv format
+    --------
+    Arguments:
+        fname : str
+            Name of simulation file. Rows are assumed to be formatted such that
+            the first column is the time stamp, and the second and third
+            columns are the pitch (outer) and roll (inner) in degrees,
+            respectively
+    '''
+    fname = os.path.join(get_data_dir(), fname)
+    logString("Attempting to open data " + fname)
+    with open(fname, newline='') as csvfile:
+        reader = csv.reader(csvfile, delimiter=',')
+        num_samples = sum(1 for row in reader) - 1 # don't count header
+    angles = np.zeros(shape=(2, num_samples))
+    time_stamps = list()
+    # time_stamps = np.zeros(shape=(1, num_samples))
+    # t0 = datetime.strptime('00:00:00.000', "%H:%M:%S.%f")
+    with open(fname, newline='') as csvfile:
+        reader = csv.reader(csvfile, delimiter=',')
+        for row in reader:
+            k = reader.line_num - 1 - 1
+            if k == -1:
+                # Skip header row
+                continue
+            ts = datetime.strptime(row[0], "%H:%M:%S.%f")
+            # time_stamps[0, k] = (ts - t0).total_seconds()
+            time_stamps.append(ts)
+            angles[OUTER, k] = float(row[1]) # Pitch
+            angles[INNER, k] = float(row[2]) # Roll
+    return angles, num_samples, time_stamps
 
 def load_data_from_file(file_name, use_calibration=False, interp_nan=True, \
     use_legacy_sign_convention=False):
@@ -841,7 +892,7 @@ def make_time_series(imu_data, num_samples, time_stamps, use_time_stamps):
         # contain perfect 10 ms spacing between samples. The IMU info will need
         # to be copied into the closest unoccupied slot, and then we'll need to
         # interpolate over missing slots
-        imu_data_ts = np.empty(shape=(int(IMU_BUF_SIZE / 4), t.shape[0]))
+        imu_data_ts = np.empty(shape=(imu_data.shape[0], t.shape[0]))
         imu_data_ts.fill(np.nan)
         for i in range(imu_data.shape[1]):
             dt = time_stamps[i] - ts

@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "args": ["--playback=oct_13_2019\\lamp_data_0.wav"]
+            "args": ["--csv2wav=simulation1/simlog1.csv"]
         }
     ]
 }

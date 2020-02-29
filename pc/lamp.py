@@ -8,13 +8,14 @@ import numpy as np
 from util import *
 from rx import record
 from tx import *
-from analyze import analyze
+from analyze import analyze, csv2wav
 
 def main():
     args = parse_args()
     port = args['port']
     baud = args['baud']
     record_mode = args['record']
+    csv2wav_fname = args['csv2wav']
     analyze_fname = args['analyze']
     animate_str = args['animate']
     playback_fname = args['playback']
@@ -29,9 +30,9 @@ def main():
     verbose = args['verbose']
     
     # Validate args!
-    if (playback_fname and analyze_fname) or \
-       (playback_fname and baseline_fname) or \
-       (analyze_fname and baseline_fname):
+    num_main_args = (playback_fname != '') + (analyze_fname != '') + \
+        (baseline_fname != '') + (csv2wav_fname != '')
+    if num_main_args > 1:
         logString("2 or more of: playback, analyze, set_baseline were selected."
                   " Please only choose one of these")
         quit()
@@ -45,7 +46,10 @@ def main():
         anim_data = validate_anim_args(animate_str)
     
     # Call requested function
-    if analyze_fname:
+    if csv2wav_fname:
+        logString("Starting .csv to .wav conversion")
+        csv2wav(csv2wav_fname)
+    elif analyze_fname:
         logString("Starting analysis")
         analyze( \
             analyze_fname, \
