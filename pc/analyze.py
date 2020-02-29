@@ -5,6 +5,7 @@
 import numpy as np
 import glob
 from util import *
+from filters import cFilt, smooth
 try:
     import animate as anim
 except:
@@ -14,66 +15,6 @@ try:
 except:
     # Raspberry Pi doesn't have matplotlib
     logString("Failed to import matplotlib.pyplot")
-
-class cFilt:
-    ''' Complementary filter '''
-    def __init__(self, alpha_p, alpha_r, theta_p=0, theta_r=0, verbose=False):
-        '''
-        Initializes the filter. Alpha is the factor that weighs the velocity
-        integral term, and 1-alpha is the factor that weighs the acceleration
-        term. Generally, large alpha is desired so that the velocity term is
-        primarily used while the acceleration term corrects drift.
-        --------
-        Arguments
-            alpha_p : double
-                Pitch (outer gimbal) weighting
-            alpha_r : double
-                Roll (inner gimbal) weighting
-            theta_p : double
-                Initial pitch
-            theta_r : double
-                Initial roll
-            verbose : bool
-                Prints debug messages if True
-        '''
-        self.__alpha_p = alpha_p
-        self.__theta_p = theta_p
-        self.__alpha_r = alpha_r
-        self.__theta_r = theta_r
-        self.__verbose = verbose
-    
-    def update(self, v, a, dt):
-        '''
-        Updates the angle estimates.
-        --------
-        Arguments
-            v : np.ndarray
-                A 3-vector containing vz, vy, vx
-            a : np.ndarray
-                A 3-vector containing az, ay, ax
-            dt : double
-                Sampling period in milliseconds
-        '''
-        if self.__verbose:
-            print(v[0:3], a[0:3])
-
-        # Outer gimbal angle (pitch)
-        a_term = (1.0 - self.__alpha_p) * np.arctan2(a[X_IDX], -a[Z_IDX]) * 180.0 / np.pi
-        v_term = self.__alpha_p * (self.__theta_p + v[Y_IDX] * (dt / 1000.0))
-        self.__theta_p = v_term + a_term
-        
-        # Inner gimbal angle (roll)
-        a_term = (1.0 - self.__alpha_r) * np.arctan2(-a[Y_IDX], -a[Z_IDX]) * 180.0 / np.pi
-        v_term = self.__alpha_r * (self.__theta_r + v[X_IDX] * (dt / 1000.0))
-        self.__theta_r = v_term + a_term
-        
-        return self.__theta_p, self.__theta_r
-        
-    def theta(self):
-        '''
-        Gets the pitch and roll angles
-        '''
-        return self.__theta_p, self.__theta_r
 
 def get_angles(raw_imu_data, num_samples):
     '''
@@ -103,9 +44,50 @@ def get_angles(raw_imu_data, num_samples):
         )
     return angles
 
+def csv2wav(fname, smoothing_data):
+    '''
+    Converts a simulation file in .csv format to .wav files
+    --------
+    Arguments:
+        fname : str
+            Name of simulation file
+        smoothing_data : tuple
+            2-tuple containing (1) smoothing window to use for time series and
+            (2) length of smoothing window
+    '''
+    assert is_simulation_data(fname), \
+        "Error: file does not seem to have extension .csv!"
+    angles, num_samples, time_stamps = load_simulation_data_from_csv(fname)
+    USE_TIME_STAMPS = True
+    t, angles, num_samples = make_time_series( \
+        angles, \
+        num_samples, \
+        time_stamps, \
+        USE_TIME_STAMPS \
+    )
+
+    # Smoothing, if requested
+    smoothing_window, window_len = smoothing_data
+    if smoothing_window != None:
+        logString( \
+            "Smoothing time series with " + smoothing_window + \
+            " window of length " + str(window_len) \
+        )
+        for i in range(angles.shape[0]):
+            angles[i,:] = smooth(
+                angles[i,:], window_len=window_len, window=smoothing_window
+            )
+
+    # Make .wav files
+    fname_base = os.path.splitext(fname)[0]
+    fname = os.path.join(get_data_dir(), fname_base)
+    write_wave(angles[OUTER,:], fname + "_outer")
+    write_wave(angles[INNER,:], fname + "_inner")
+    return
+
 def analyze(fname, imu_to_plot, estimate, use_calibration, \
     use_legacy_sign_convention, use_time_stamps, plot_slice, \
-    make_wav, anim_data):
+    make_wav, anim_data, smoothing_data):
     '''
     Visualizes logged data
     --------
@@ -139,6 +121,9 @@ def analyze(fname, imu_to_plot, estimate, use_calibration, \
         anim_data : tuple
             3-tuple containing (1) bool indicating whether or not to animate,
             (2) animation type, and (3) animation arguments
+        smoothing_data : tuple
+            2-tuple containing (1) smoothing window to use for time series and
+            (2) length of smoothing window
     '''
     make_data_dir()
     if fname == "latest":
@@ -158,6 +143,18 @@ def analyze(fname, imu_to_plot, estimate, use_calibration, \
         use_time_stamps \
     )
     angles = get_angles(imu_data, num_samples)
+
+    # Smoothing, if requested
+    smoothing_window, window_len = smoothing_data
+    if smoothing_window != None:
+        logString( \
+            "Smoothing time series with " + smoothing_window + \
+            " window of length " + str(window_len) \
+        )
+        for i in range(angles.shape[0]):
+            angles[i,:] = smooth(
+                angles[i,:], window_len=window_len, window=smoothing_window
+            )
 
     if make_wav:
         # Combine the pitch and roll from each IMU into a single value for each
