@@ -112,6 +112,16 @@ void lss_reset(lss_t* hlss)
 
 //-----------------------------------------------------------------------------
 
+void lss_goLimp(lss_t* hlss)
+{
+    uint8_t buff[16];
+    uint8_t length = snprintf((char*)buff, 16, "#%dL", hlss->id);
+    buff[length] = '\r'; // Overwrite null character with cmd termination
+    lss_transmit(hlss, buff, length + 1);
+}
+
+//-----------------------------------------------------------------------------
+
 void lss_set_position(lss_t* hlss, float angle)
 {
     uint8_t buff[16];

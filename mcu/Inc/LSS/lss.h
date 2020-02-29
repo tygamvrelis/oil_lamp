@@ -92,6 +92,12 @@ enum IO_FLAGS lss_get_io_type();
 void lss_reset(lss_t* hlss);
 
 /**
+ * @brief Kills power to servo, causing it to go limp
+ * @param hlss Handle for the motor
+ */
+void lss_goLimp(lss_t* hlss);
+
+/**
  * @brief Sends command to move the servo to the specified angle
  * @param hlss Handle for the motor in degrees
  * @param angle Desired angle for motor

@@ -380,7 +380,6 @@ void StartRxTask(void const * argument)
                     break;
                 case CMD_RESET:
                     taskENTER_CRITICAL();
-
                     NVIC_SystemReset();
                     break;
                 case CMD_ANGLE:
