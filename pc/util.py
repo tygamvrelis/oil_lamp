@@ -1053,18 +1053,17 @@ def load_angles_from_wav(outer_fname, inner_fname):
     wavfile_outer = wave.open(outer_fname, "r")
     wavfile_inner = wave.open(inner_fname, "r")
     # Sanity checks...
-    assert(wavfile_outer.getnchannels() == 1 and wavfile_inner.getnchannels() == 1, \
-        "ERROR: can only support single-channel wav files")
-    assert(wavfile_outer.getsampwidth() == 2 and wavfile_inner.getsampwidth() == 2, \
-        "ERROR: can only support wav files with sample width of 2 bytes")
-    assert( \
+    assert wavfile_outer.getnchannels() == 1 and wavfile_inner.getnchannels() == 1, \
+        "ERROR: can only support single-channel wav files"
+    assert wavfile_outer.getsampwidth() == 2 and wavfile_inner.getsampwidth() == 2, \
+        "ERROR: can only support wav files with sample width of 2 bytes"
+    assert \
         wavfile_outer.getframerate() == WAV_SAMPLE_RATE and \
         wavfile_inner.getframerate() == WAV_SAMPLE_RATE, \
-        "ERROR: can only support wav files with sample rate of {} Hz".format(WAV_SAMPLE_RATE) \
-    )
+        "ERROR: can only support wav files with sample rate of {} Hz".format(WAV_SAMPLE_RATE)
     nframes = wavfile_outer.getnframes()
-    assert(nframes == wavfile_inner.getnframes(), \
-        "wav files for outer and inner angles must have same length!")
+    assert nframes == wavfile_inner.getnframes(), \
+        "wav files for outer and inner angles must have same length!"
     
     # Make angles array and load data into it
     RATE_RATIO = int(WAV_SAMPLE_RATE / get_sample_rate());
@@ -1076,7 +1075,7 @@ def load_angles_from_wav(outer_fname, inner_fname):
         outer_bytes = wavfile_outer.readframes(CHUNK_SIZE)
         inner_bytes = wavfile_inner.readframes(CHUNK_SIZE)
         num_bytes_read = len(outer_bytes)
-        assert(num_bytes_read % 2 == 0, "ERROR: impossible to read odd # of bytes from wav")
+        assert num_bytes_read % 2 == 0, "ERROR: impossible to read odd # of bytes from wav"
         num_samples_read = num_bytes_read//2
         num_angles_read = num_samples_read//RATE_RATIO
         tmp = struct.unpack("<{}h".format(num_samples_read), outer_bytes)[::RATE_RATIO]
