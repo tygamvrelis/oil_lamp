@@ -44,13 +44,16 @@ def get_angles(raw_imu_data, num_samples):
         )
     return angles
 
-def csv2wav(fname):
+def csv2wav(fname, smoothing_data):
     '''
     Converts a simulation file in .csv format to .wav files
     --------
     Arguments:
         fname : str
             Name of simulation file
+        smoothing_data : tuple
+            2-tuple containing (1) smoothing window to use for time series and
+            (2) length of smoothing window
     '''
     assert is_simulation_data(fname), \
         "Error: file does not seem to have extension .csv!"
@@ -63,9 +66,17 @@ def csv2wav(fname):
         USE_TIME_STAMPS \
     )
 
-    # Smoothing if needed...?
-    # for i in range(angles.shape[0]):
-    #     angles[i,:] = smooth(angles[i,:], window_len=51, window='hanning')
+    # Smoothing, if requested
+    smoothing_window, window_len = smoothing_data
+    if smoothing_window != None:
+        logString( \
+            "Smoothing time series with " + smoothing_window + \
+            " window of length " + str(window_len) \
+        )
+        for i in range(angles.shape[0]):
+            angles[i,:] = smooth(
+                angles[i,:], window_len=window_len, window=smoothing_window
+            )
 
     # Make .wav files
     fname_base = os.path.splitext(fname)[0]
@@ -76,7 +87,7 @@ def csv2wav(fname):
 
 def analyze(fname, imu_to_plot, estimate, use_calibration, \
     use_legacy_sign_convention, use_time_stamps, plot_slice, \
-    make_wav, anim_data):
+    make_wav, anim_data, smoothing_data):
     '''
     Visualizes logged data
     --------
@@ -110,6 +121,9 @@ def analyze(fname, imu_to_plot, estimate, use_calibration, \
         anim_data : tuple
             3-tuple containing (1) bool indicating whether or not to animate,
             (2) animation type, and (3) animation arguments
+        smoothing_data : tuple
+            2-tuple containing (1) smoothing window to use for time series and
+            (2) length of smoothing window
     '''
     make_data_dir()
     if fname == "latest":
@@ -129,6 +143,18 @@ def analyze(fname, imu_to_plot, estimate, use_calibration, \
         use_time_stamps \
     )
     angles = get_angles(imu_data, num_samples)
+
+    # Smoothing, if requested
+    smoothing_window, window_len = smoothing_data
+    if smoothing_window != None:
+        logString( \
+            "Smoothing time series with " + smoothing_window + \
+            " window of length " + str(window_len) \
+        )
+        for i in range(angles.shape[0]):
+            angles[i,:] = smooth(
+                angles[i,:], window_len=window_len, window=smoothing_window
+            )
 
     if make_wav:
         # Combine the pitch and roll from each IMU into a single value for each

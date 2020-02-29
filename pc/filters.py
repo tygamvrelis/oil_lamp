@@ -97,7 +97,7 @@ def smooth(x,window_len=11,window='hanning'):
     if window_len<3:
             return x
     if not window in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
-            raise ValueError("Window is on of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'")
+            raise ValueError("Window must be one of flat, hanning, hamming, bartlett, blackman")
     s=np.r_[2*x[0]-x[window_len-1::-1],x,2*x[-1]-x[-1:-window_len:-1]]
     if window == 'flat': #moving average
             w=np.ones(window_len,'d')
@@ -105,3 +105,16 @@ def smooth(x,window_len=11,window='hanning'):
             w=eval('np.'+window+'(window_len)')
     y=np.convolve(w/w.sum(),s,mode='same')
     return y[window_len:-window_len+1]
+
+def validate_smoothing_args(smoothing_str):
+    smoothing_strs = smoothing_str.split(',')
+    assert len(smoothing_strs) == 2, \
+        "Smoothing needs 2 arguments but got none!"
+    window = smoothing_strs[0]
+    length = int(smoothing_strs[1])
+    try:
+        smooth(np.zeros(shape=(length*3)), window_len=length, window=window)
+    except Exception as e:
+        print(e)
+        exit(1)
+    return window, length

@@ -100,6 +100,15 @@ def parse_args():
         type=str2bool,
         default=False
     )
+
+    parser.add_argument(
+        '--smoothing',
+        help='(analyze, csv2wav option) Specifies angle smoothing parameters'
+             ' in the form window,length. For example,'
+             ' --smoothing=hanning,11 will smooth the angle data using a'
+             ' hanning window of length 11 samples',
+        default=''
+    )
     
     parser.add_argument(
         '--imu',
@@ -288,34 +297,34 @@ def validate_slice_args(slice_name, slice_args):
 
 def validate_anim_args(animate_str):
     anim_strs = animate_str.split(",")
-    assert(len(anim_strs) > 0), "Animate needs an argument but got none!"
+    assert len(anim_strs) > 0, "Animate needs an argument but got none!"
     anim_type = anim_strs[0]
-    assert( \
+    assert \
         anim_type == 'phase' or \
         anim_type == 'pendulum' or \
-        anim_type == 'top_down' \
-    ), "Invalid argument to animate. Must be phase, pendulum, or top_down"
+        anim_type == 'top_down', \
+            "Invalid argument to animate. Must be phase, pendulum, or top_down"
     if anim_type == 'pendulum':
-        assert(len(anim_strs) == 2), \
+        assert len(anim_strs) == 2, \
             "Invalid number of arguments to animate (pendulum). Must be 1"
         anim_args = anim_strs[1]
-        assert( \
+        assert \
             anim_args == 'outer' or \
             anim_args == 'inner' or \
-            anim_args == 'both' \
-        ), "Invalid argument to animate (pendulum). Must be outer, inner, or both"
+            anim_args == 'both', \
+                "Invalid argument to animate (pendulum). Must be outer, inner, or both"
     elif anim_type == 'top_down':
         if len(anim_strs) == 1:
             anim_args = None
         elif len(anim_strs) == 2:
-            assert(anim_strs[1] == 'decomp'), \
+            assert anim_strs[1] == 'decomp', \
                 "Animate (top_down) got invalid argument. Supported args: decomp"
             anim_args = anim_strs[1]
         else:
-            assert(false), \
+            assert False, \
                 "Invalid number of arguments to animate (top_down). Must be 0 or 1"
     else:
-        assert(len(anim_strs) == 1), \
+        assert len(anim_strs) == 1, \
             "Animate (phase) does not need any arguments, but it got 1!"
         anim_args = None
     anim_data = (True, anim_type, anim_args)

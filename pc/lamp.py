@@ -9,6 +9,7 @@ from util import *
 from rx import record
 from tx import *
 from analyze import analyze, csv2wav
+from filters import validate_smoothing_args
 
 def main():
     args = parse_args()
@@ -17,6 +18,7 @@ def main():
     record_mode = args['record']
     csv2wav_fname = args['csv2wav']
     analyze_fname = args['analyze']
+    smoothing_str = args['smoothing']
     animate_str = args['animate']
     playback_fname = args['playback']
     baseline_fname = args['set_baseline']
@@ -44,11 +46,14 @@ def main():
     anim_data = (False, None, None)
     if animate_str:
         anim_data = validate_anim_args(animate_str)
+    smoothing_data = (None, None)
+    if smoothing_str:
+        smoothing_data = validate_smoothing_args(smoothing_str)
     
     # Call requested function
     if csv2wav_fname:
         logString("Starting .csv to .wav conversion")
-        csv2wav(csv2wav_fname)
+        csv2wav(csv2wav_fname, smoothing_data)
     elif analyze_fname:
         logString("Starting analysis")
         analyze( \
@@ -60,7 +65,8 @@ def main():
             args['use_time_stamps'], \
             plot_slice, \
             args['make_wav'], \
-            anim_data
+            anim_data, \
+            smoothing_data
         )
     elif playback_fname:
         logString("Starting playback")
