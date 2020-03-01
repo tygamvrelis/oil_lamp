@@ -335,8 +335,9 @@ CMD_CTRL_DI = '0'
 CMD_CTRL_EN = '1'
 CMD_SENS_DI = '2'
 CMD_SENS_EN = '3'
-CMD_ANGLE = 'A'
 CMD_ZERO_REF = 'Z'
+CMD_RESET = 'R'
+CMD_ANGLE = 'A'
 def enable_servos(ser):
     '''
     Sends the MCU a command to enable servo actuation
