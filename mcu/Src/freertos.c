@@ -210,7 +210,6 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
 
   /* USER CODE END Init */
-
   /* Create the mutex(es) */
   /* definition and creation of TableLock */
   osMutexStaticDef(TableLock, &TableLockControlBlock);
@@ -292,7 +291,6 @@ void MX_FREERTOS_Init(void) {
 /* USER CODE END Header_StartRxTask */
 void StartRxTask(void const * argument)
 {
-
   /* USER CODE BEGIN StartRxTask */
     scheduler_has_started = true;
     static const uint32_t RX_CYCLE_TIME = osKernelSysTickMicroSec(1000);
