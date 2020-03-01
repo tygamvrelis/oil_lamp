@@ -313,13 +313,15 @@ void StartRxTask(void const * argument)
         CMD_ZERO_REF = 'Z',
         CMD_ZERO_REF_OUTER = 'O',
         CMD_ZERO_REF_INNER = 'I',
+        CMD_RESET = 'R',
         CMD_ANGLE = 'A',
         CMD_ANGLE_OUTER = '8', // Exact value doesn't matter, just has to be
         CMD_ANGLE_INNER = '9'  // unique (these are used as parse states only)
     } parse_state = CMD_NONE;
 
     MX_WWDG_Init();
-    disable_control();
+//    disable_control();
+    enable_control();
     HAL_UART_Receive_DMA(&huart2, rx_buff, sizeof(rx_buff));
     for(;;)
     {
@@ -334,6 +336,10 @@ void StartRxTask(void const * argument)
                     if ((char)data == (char)CMD_BLINK)
                     {
                         parse_state = CMD_BLINK;
+                    }
+                    else if ((char)data == (char)CMD_RESET)
+                    {
+                        parse_state = CMD_RESET;
                     }
                     else if ((char)data == (char)CMD_ANGLE)
                     {
@@ -372,6 +378,10 @@ void StartRxTask(void const * argument)
                 case CMD_BLINK:
                     blink_camera_led();
                     parse_state = CMD_NONE;
+                    break;
+                case CMD_RESET:
+                    taskENTER_CRITICAL();
+                    NVIC_SystemReset();
                     break;
                 case CMD_ANGLE:
                     parse_state = CMD_ANGLE_OUTER;
@@ -439,7 +449,7 @@ void StartRxTask(void const * argument)
                     break;
             }
         }
-        if (huart2.RxState == HAL_UART_STATE_ERROR)
+        if (huart2.RxState == HAL_UART_STATE_ERROR || huart2.ErrorCode != HAL_UART_ERROR_NONE)
         {
             HAL_UART_AbortReceive(&huart2);
             HAL_UART_Receive_DMA(&huart2, rx_buff, sizeof(rx_buff));

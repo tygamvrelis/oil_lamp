@@ -3,8 +3,11 @@
 # Date: January 11, 2019
 
 import numpy as np
-from scipy.signal import butter, lfilter, freqz
-from util import Z_IDX, Y_IDX, X_IDX
+from util import Z_IDX, Y_IDX, X_IDX, logString
+try:
+    from scipy.signal import butter, lfilter, freqz
+except:
+    logString("Could not import scipy.signal")
 
 class cFilt:
     ''' Complementary filter '''

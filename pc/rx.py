@@ -8,8 +8,11 @@ import serial
 import os
 import struct
 import numpy as np
-from prettytable import PrettyTable
 from util import *
+try:
+    from prettytable import PrettyTable
+except:
+    logString("Failed to import PrettyTable")
     
 def print_imu(data):
     '''

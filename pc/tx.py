@@ -15,7 +15,7 @@ def transmit_angles(ser, a_outer, a_inner, dryrun=False):
     Sends angle data to the MCU
     --------
     Arguments:
-        port : serial.Serial
+        ser : serial.Serial
             COM port that MCU is connected to
         a_outer : float
             Outer gimbal angle
@@ -27,7 +27,7 @@ def transmit_angles(ser, a_outer, a_inner, dryrun=False):
     if dryrun:
         logString("Outer: {0}|Inner: {1}".format(a_outer, a_inner))
     else:
-        cmd_id = CMD_ANGLE.encode() # A => Angle payload
+        cmd_id = CMD_ANGLE.encode() # Angle payload
         # It turns out that rounding error for ints is noticable, especially at
         # low playback frequencies (e.g. 10*sin(2*pi*0.1*t)) and for small angles. So
         # we're sticking with floats
@@ -35,6 +35,15 @@ def transmit_angles(ser, a_outer, a_inner, dryrun=False):
         packet = cmd_id + payload
         ser.write(packet)
     return
+
+def transmit_mcu_reset(ser):
+    '''
+    Sends a command to the MCU which causes it to perform a hard reset
+    --------
+    Arguments:
+        port : serial.Serial
+    '''
+    ser.write(CMD_RESET.encode())
 
 def send_servo_angles(port, baud, angles):
     '''
