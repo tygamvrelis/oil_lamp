@@ -320,7 +320,8 @@ void StartRxTask(void const * argument)
     } parse_state = CMD_NONE;
 
     MX_WWDG_Init();
-    disable_control();
+//    disable_control();
+    enable_control();
     HAL_UART_Receive_DMA(&huart2, rx_buff, sizeof(rx_buff));
     for(;;)
     {
@@ -448,7 +449,7 @@ void StartRxTask(void const * argument)
                     break;
             }
         }
-        if (huart2.RxState == HAL_UART_STATE_ERROR)
+        if (huart2.RxState == HAL_UART_STATE_ERROR || huart2.ErrorCode != HAL_UART_ERROR_NONE)
         {
             HAL_UART_AbortReceive(&huart2);
             HAL_UART_Receive_DMA(&huart2, rx_buff, sizeof(rx_buff));
