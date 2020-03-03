@@ -59,6 +59,9 @@
 #define BUF_BASE_IMU 2
 #define BUF_STATUS   (BUF_SIZE - 2)
 #define BUF_FOOTER   (BUF_SIZE - 1)
+
+//#define PC_UART huart2
+#define PC_UART huart6
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -210,7 +213,6 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
 
   /* USER CODE END Init */
-
   /* Create the mutex(es) */
   /* definition and creation of TableLock */
   osMutexStaticDef(TableLock, &TableLockControlBlock);
@@ -292,7 +294,6 @@ void MX_FREERTOS_Init(void) {
 /* USER CODE END Header_StartRxTask */
 void StartRxTask(void const * argument)
 {
-
   /* USER CODE BEGIN StartRxTask */
     scheduler_has_started = true;
     static const uint32_t RX_CYCLE_TIME = osKernelSysTickMicroSec(1000);
@@ -322,11 +323,11 @@ void StartRxTask(void const * argument)
     MX_WWDG_Init();
 //    disable_control();
     enable_control();
-    HAL_UART_Receive_DMA(&huart2, rx_buff, sizeof(rx_buff));
+    HAL_UART_Receive_DMA(&PC_UART, rx_buff, sizeof(rx_buff));
     for(;;)
     {
         osDelayUntil(&xLastWakeTime, RX_CYCLE_TIME);
-        circ_buff.iHead = circ_buff.size - huart2.hdmarx->Instance->NDTR;
+        circ_buff.iHead = circ_buff.size - PC_UART.hdmarx->Instance->NDTR;
         while(circ_buff.iHead != circ_buff.iTail)
         {
             uint8_t data = pop(&circ_buff);
@@ -449,10 +450,10 @@ void StartRxTask(void const * argument)
                     break;
             }
         }
-        if (huart2.RxState == HAL_UART_STATE_ERROR || huart2.ErrorCode != HAL_UART_ERROR_NONE)
+        if (PC_UART.RxState == HAL_UART_STATE_ERROR || PC_UART.ErrorCode != HAL_UART_ERROR_NONE)
         {
-            HAL_UART_AbortReceive(&huart2);
-            HAL_UART_Receive_DMA(&huart2, rx_buff, sizeof(rx_buff));
+            HAL_UART_AbortReceive(&PC_UART);
+            HAL_UART_Receive_DMA(&PC_UART, rx_buff, sizeof(rx_buff));
         }
     }
   /* USER CODE END StartRxTask */
@@ -493,9 +494,9 @@ void StartTxTask(void const * argument)
         buf[BUF_STATUS] = status;
 
         // Send
-        if (HAL_UART_Transmit_DMA(&huart2, buf, sizeof(buf)) != HAL_OK)
+        if (HAL_UART_Transmit_DMA(&PC_UART, buf, sizeof(buf)) != HAL_OK)
         {
-            HAL_UART_AbortTransmit_IT(&huart2);
+            HAL_UART_AbortTransmit_IT(&PC_UART);
         }
         else
         {
@@ -701,7 +702,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart){
     if (scheduler_has_started)
     {
         BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-        if (huart->Instance == USART2 && TxSemHandle != NULL){
+        if (huart->Instance == PC_UART.Instance && TxSemHandle != NULL){
             xSemaphoreGiveFromISR(TxSemHandle, &xHigherPriorityTaskWoken);
         }
         else if(huart->Instance == USART1){
@@ -715,7 +716,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
     if (scheduler_has_started)
     {
         BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-        if (huart->Instance == USART2 && RxSemHandle != NULL){
+        if (huart->Instance == PC_UART.Instance && RxSemHandle != NULL){
             xSemaphoreGiveFromISR(RxSemHandle, &xHigherPriorityTaskWoken);
         }
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);

@@ -75,6 +75,7 @@ int main(void)
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
+  
 
   /* MCU Configuration--------------------------------------------------------*/
 
@@ -100,19 +101,20 @@ int main(void)
   MX_I2C3_Init();
   MX_TIM2_Init();
   MX_USART1_UART_Init();
+  MX_USART6_UART_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
   HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_2);
   init_imu(&imu_base, &hi2c1);
   init_imu(&imu_lamp, &hi2c3);
   /* USER CODE END 2 */
-
+ 
   /* Call init function for freertos objects (in freertos.c) */
-  MX_FREERTOS_Init();
-
+  MX_FREERTOS_Init(); 
+ 
   /* Start scheduler */
   osKernelStart();
-  
+ 
   /* We should never get here as control is now taken by the scheduler */
 
   /* Infinite loop */
