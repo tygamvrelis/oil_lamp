@@ -323,9 +323,8 @@ void StartRxTask(void const * argument)
     };
 
     MX_WWDG_Init();
-//    disable_control();
     enable_control();
-//    disable_sensing();
+    disable_sensing();
     HAL_UART_Receive_DMA(&PC_UART, rx_buff, sizeof(rx_buff));
     for(;;)
     {
