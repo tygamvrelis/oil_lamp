@@ -31,6 +31,13 @@ int8_t bound_int8_t(int8_t val, int8_t min_val, int8_t max_val);
 float bound_float(float val, float min_val, float max_val);
 
 /**
+ * @return the checksum of the given byte array
+ * @param arr the array of bytes to compute the checksum over
+ * @param len the length of the array
+ */
+uint8_t rs232_checksum(uint8_t* arr, uint8_t len);
+
+/**
  * @}
  */
 /* end - Util */

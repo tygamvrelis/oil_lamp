@@ -300,9 +300,10 @@ void StartRxTask(void const * argument)
     TickType_t xLastWakeTime = xTaskGetTickCount();
 
     static uint8_t rx_buff[32] = {0}; // static => no stack usage
+    static uint8_t cmd_buff[16] = {0};
     CircBuff_t circ_buff = {sizeof(rx_buff), 0, 0, rx_buff};
-    float tmp_angle = 0.0;
-    uint8_t cnt = 0;
+    uint8_t cnt = 0; // number of bytes received so far
+    uint8_t num_needed = 0; // length of command packet currently being recv
 
     enum {
         CMD_NONE,
@@ -317,12 +318,13 @@ void StartRxTask(void const * argument)
         CMD_RESET = 'R',
         CMD_ANGLE = 'A',
         CMD_ANGLE_OUTER = '8', // Exact value doesn't matter, just has to be
-        CMD_ANGLE_INNER = '9'  // unique (these are used as parse states only)
-    } parse_state = CMD_NONE;
+        CMD_ANGLE_INNER = '9', // unique (these are used as parse states only)
+        CMD_CHECKSUM = 'C'     // same
+    };
 
     MX_WWDG_Init();
-//    disable_control();
     enable_control();
+    disable_sensing();
     HAL_UART_Receive_DMA(&PC_UART, rx_buff, sizeof(rx_buff));
     for(;;)
     {
@@ -331,123 +333,117 @@ void StartRxTask(void const * argument)
         while(circ_buff.iHead != circ_buff.iTail)
         {
             uint8_t data = pop(&circ_buff);
-            switch (parse_state)
+            if (num_needed == 0)
             {
-                case CMD_NONE:
-                    if ((char)data == (char)CMD_BLINK)
-                    {
-                        parse_state = CMD_BLINK;
-                    }
-                    else if ((char)data == (char)CMD_RESET)
-                    {
-                        parse_state = CMD_RESET;
-                    }
-                    else if ((char)data == (char)CMD_ANGLE)
-                    {
-                        parse_state = CMD_ANGLE;
-                        cnt = 0;
-                    }
-                    else if ((char)data == (char)CMD_ZERO_REF)
-                    {
-                        parse_state = CMD_ZERO_REF;
-                        cnt = 0;
-                    }
-                    else if ((char)data == (char)CMD_CTRL_DI)
-                    {
-                        disable_control();
-                    }
-                    else if ((char)data == (char)CMD_CTRL_EN)
-                    {
-                        enable_control();
-                    }
-                    else if ((char)data == (char)CMD_SENS_DI)
-                    {
-                        disable_sensing();
-                    }
-                    else if ((char)data == (char)CMD_SENS_EN)
-                    {
-                        enable_sensing();
-                    }
-                    break;
-                default:
-                    break;
+                // If we are not in the middle of receiving a command packet...
+                // then enter the state where we are waiting for the full thing
+                // to arrive
+                if ((char)data == (char)CMD_BLINK)
+                {
+                    num_needed = 2;
+                }
+                else if ((char)data == (char)CMD_RESET)
+                {
+                    num_needed = 2;
+                }
+                else if ((char)data == (char)CMD_ANGLE)
+                {
+                    num_needed = 1 + sizeof(float) * 2 + 1;
+                }
+                else if ((char)data == (char)CMD_ZERO_REF)
+                {
+                    num_needed = 1 + sizeof(float) * 2 + 1;
+                }
+                else if ((char)data == (char)CMD_CTRL_DI)
+                {
+                    num_needed = 2;
+                }
+                else if ((char)data == (char)CMD_CTRL_EN)
+                {
+                    num_needed = 2;
+                }
+                else if ((char)data == (char)CMD_SENS_DI)
+                {
+                    num_needed = 2;
+                }
+                else if ((char)data == (char)CMD_SENS_EN)
+                {
+                    num_needed = 2;
+                }
             }
 
-            // Take action based on state
-            switch (parse_state)
+            if (num_needed != 0)
             {
-                case CMD_BLINK:
-                    blink_camera_led();
-                    parse_state = CMD_NONE;
-                    break;
-                case CMD_RESET:
-                    taskENTER_CRITICAL();
-                    NVIC_SystemReset();
-                    break;
-                case CMD_ANGLE:
-                    parse_state = CMD_ANGLE_OUTER;
-                    break;
-                case CMD_ANGLE_OUTER:
-                    ((uint8_t*)&tmp_angle)[cnt] = data;
-                    ++cnt;
-                    if (cnt == sizeof(float))
+                // If we are in the process of receiving a command packet...
+                cmd_buff[cnt] = data;
+                ++cnt;
+            }
+
+            if (num_needed != 0 && cnt == num_needed)
+            {
+                // Verify integrity
+                uint8_t check = rs232_checksum(cmd_buff, num_needed);
+                if (check == 0)
+                {
+                    // Perform requested command function
+                    uint8_t cmd = cmd_buff[0];
+                    switch(cmd)
                     {
-                        write_table(
-                            TABLE_IDX_OUTER_GIMBAL_ANGLE,
-                            (uint8_t*)&tmp_angle,
-                            sizeof(float)
-                        );
-                        parse_state = CMD_ANGLE_INNER;
-                        cnt = 0;
+                        case CMD_BLINK:
+                            blink_camera_led();
+                            break;
+                        case CMD_RESET:
+                            taskENTER_CRITICAL();
+                            NVIC_SystemReset();
+                            break;
+                        case CMD_CTRL_DI:
+                            disable_control();
+                            break;
+                        case CMD_CTRL_EN:
+                            enable_control();
+                            break;
+                        case CMD_SENS_DI:
+                            disable_sensing();
+                            break;
+                        case CMD_SENS_EN:
+                            enable_sensing();
+                            break;
+                        case CMD_ANGLE:
+                            // Outer
+                            write_table(
+                                TABLE_IDX_OUTER_GIMBAL_ANGLE,
+                                &cmd_buff[1],
+                                sizeof(float)
+                            );
+
+                            // Inner
+                            write_table(
+                                TABLE_IDX_INNER_GIMBAL_ANGLE,
+                                &cmd_buff[1 + sizeof(float)],
+                                sizeof(float)
+                            );
+                            break;
+                        case CMD_ZERO_REF:
+                            // Outer
+                            write_table(
+                                TABLE_IDX_ZERO_REF_OUTER_GIMBAL,
+                                &cmd_buff[1],
+                                sizeof(float)
+                            );
+
+                            // Inner
+                            write_table(
+                                TABLE_IDX_ZERO_REF_INNER_GIMBAL,
+                                &cmd_buff[1 + sizeof(float)],
+                                sizeof(float)
+                            );
+                            break;
+                        default:
+                            break;
                     }
-                    break;
-                case CMD_ANGLE_INNER:
-                    ((uint8_t*)&tmp_angle)[cnt] = data;
-                    ++cnt;
-                    if (cnt == sizeof(float))
-                    {
-                        write_table(
-                            TABLE_IDX_INNER_GIMBAL_ANGLE,
-                            (uint8_t*)&tmp_angle,
-                            sizeof(float)
-                        );
-                        parse_state = CMD_NONE;
-                        cnt = 0;
-                    }
-                    break;
-                case CMD_ZERO_REF:
-                    parse_state = CMD_ZERO_REF_OUTER;
-                    break;
-                case CMD_ZERO_REF_OUTER:
-                    ((uint8_t*)&tmp_angle)[cnt] = data;
-                    ++cnt;
-                    if (cnt == sizeof(float))
-                    {
-                        write_table(
-                            TABLE_IDX_ZERO_REF_OUTER_GIMBAL,
-                            (uint8_t*)&tmp_angle,
-                            sizeof(float)
-                        );
-                        parse_state = CMD_ZERO_REF_INNER;
-                        cnt = 0;
-                    }
-                    break;
-                case CMD_ZERO_REF_INNER:
-                    ((uint8_t*)&tmp_angle)[cnt] = data;
-                    ++cnt;
-                    if (cnt == sizeof(float))
-                    {
-                        write_table(
-                            TABLE_IDX_ZERO_REF_INNER_GIMBAL,
-                            (uint8_t*)&tmp_angle,
-                            sizeof(float)
-                        );
-                        parse_state = CMD_NONE;
-                        cnt = 0;
-                    }
-                    break;
-                default:
-                    break;
+                }
+                num_needed = 0;
+                cnt = 0;
             }
         }
         if (PC_UART.RxState == HAL_UART_STATE_ERROR || PC_UART.ErrorCode != HAL_UART_ERROR_NONE)
@@ -455,6 +451,7 @@ void StartRxTask(void const * argument)
             HAL_UART_AbortReceive(&PC_UART);
             HAL_UART_Receive_DMA(&PC_UART, rx_buff, sizeof(rx_buff));
         }
+        // TODO: add timeout...?
     }
   /* USER CODE END StartRxTask */
 }

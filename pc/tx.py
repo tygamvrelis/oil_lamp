@@ -32,8 +32,8 @@ def transmit_angles(ser, a_outer, a_inner, dryrun=False):
         # low playback frequencies (e.g. 10*sin(2*pi*0.1*t)) and for small angles. So
         # we're sticking with floats
         payload = struct.pack('<f', a_outer) + struct.pack('<f', a_inner)
-        packet = cmd_id + payload
-        ser.write(packet)
+        msg = cmd_id + payload
+        send_with_checksum(ser, msg)
     return
 
 def transmit_mcu_reset(ser):
@@ -43,7 +43,8 @@ def transmit_mcu_reset(ser):
     Arguments:
         port : serial.Serial
     '''
-    ser.write(CMD_RESET.encode())
+    msg = CMD_RESET.encode()
+    send_with_checksum(ser, msg)
 
 def send_servo_angles(port, baud, angles):
     '''
@@ -143,8 +144,8 @@ def send_reference_point_update(port, baud, angles):
             enable_servos(ser)
             cmd_id = CMD_ZERO_REF.encode()
             payload = struct.pack('<f', a_outer) + struct.pack('<f', a_inner)
-            packet = cmd_id + payload
-            ser.write(packet)
+            msg = cmd_id + payload
+            send_with_checksum(ser, msg)
         logString("Updated origin to: (outer, inner) = ({0}, {1})".format(
             np.round(a_outer,2),  np.round(a_inner,2))
         )

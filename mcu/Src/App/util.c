@@ -50,6 +50,18 @@ float bound_float(float val, float min_val, float max_val)
     }
 }
 
+//-----------------------------------------------------------------------------
+
+uint8_t rs232_checksum(uint8_t* arr, uint8_t len)
+{
+    uint8_t sum = 0;
+    for (uint8_t i = 0; i < len; ++i)
+    {
+        sum += arr[i];
+    }
+    return (~sum) & 0xFF;
+}
+
 /**
  * @}
  */
