@@ -1242,4 +1242,4 @@ def rs232_checksum(the_bytes):
             The bytes to compute the checksum with
     '''
     trunc_sum = sum(the_bytes) & 0xFF
-    return struct.pack('<B', (255 - trunc_sum + 1) % 256)
+    return struct.pack('<B', (~trunc_sum) & 0xFF)
