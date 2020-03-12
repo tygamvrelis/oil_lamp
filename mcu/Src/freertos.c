@@ -334,8 +334,6 @@ void StartRxTask(void const * argument)
         while(circ_buff.iHead != circ_buff.iTail)
         {
             uint8_t data = pop(&circ_buff);
-            cmd_buff[cnt] = data;
-            ++cnt;
             if (num_needed == 0)
             {
                 // If we are not in the middle of receiving a command packet...
@@ -373,10 +371,16 @@ void StartRxTask(void const * argument)
                 {
                     num_needed = 2;
                 }
-                break;
             }
 
-            if (cnt == num_needed)
+            if (num_needed != 0)
+            {
+                // If we are in the process of receiving a command packet...
+                cmd_buff[cnt] = data;
+                ++cnt;
+            }
+
+            if (num_needed != 0 && cnt == num_needed)
             {
                 // Verify integrity
                 uint8_t check = rs232_checksum(cmd_buff, num_needed);
@@ -415,7 +419,7 @@ void StartRxTask(void const * argument)
 
                             // Inner
                             write_table(
-                                TABLE_IDX_OUTER_GIMBAL_ANGLE,
+                                TABLE_IDX_INNER_GIMBAL_ANGLE,
                                 &cmd_buff[1 + sizeof(float)],
                                 sizeof(float)
                             );
