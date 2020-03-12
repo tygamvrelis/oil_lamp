@@ -338,6 +338,20 @@ CMD_SENS_EN = '3'
 CMD_ZERO_REF = 'Z'
 CMD_RESET = 'R'
 CMD_ANGLE = 'A'
+def send_with_checksum(ser, msg):
+    '''
+    Sends message over serial port with checksum attached
+    --------
+    Arguments:
+        ser : serial.Serial
+            Serial port
+        msg : list of byte
+            Bytes to be transmitted
+    '''
+    check_byte = rs232_checksum(msg)
+    packet = msg + check_byte
+    ser.write(packet)
+
 def enable_servos(ser):
     '''
     Sends the MCU a command to enable servo actuation
@@ -347,7 +361,8 @@ def enable_servos(ser):
             COM port that MCU is connected to
     '''
     logString("Enabling servos")
-    ser.write(CMD_CTRL_EN.encode())
+    msg = CMD_CTRL_EN.encode()
+    send_with_checksum(ser, msg)
 
 def disable_servos(ser):
     '''
@@ -358,7 +373,8 @@ def disable_servos(ser):
             COM port that MCU is connected to
     '''
     logString("Disabling servos")
-    ser.write(CMD_CTRL_DI.encode())
+    msg = CMD_CTRL_DI.encode()
+    send_with_checksum(ser, msg)
 
 def enable_imus(ser):
     '''
@@ -369,7 +385,8 @@ def enable_imus(ser):
             COM port that MCU is connected to
     '''
     logString("Enabling IMUs")
-    ser.write(CMD_SENS_EN.encode())
+    msg = CMD_SENS_EN.encode()
+    send_with_checksum(ser, msg)
 
 def disable_imus(ser):
     '''
@@ -380,7 +397,8 @@ def disable_imus(ser):
             COM port that MCU is connected to
     '''
     logString("Disabling IMUs")
-    ser.write(CMD_SENS_DI.encode())
+    msg = CMD_SENS_DI.encode()
+    send_with_checksum(ser, msg)
 
 # For angles in Analyze
 OUTER = 0
@@ -1211,3 +1229,17 @@ class WaitForMs:
                 np.round(t_wait*1000,4), np.round(t_waited*1000,4),
                 np.round(err*1000,4), np.round(self._t_err*1000,4)
             )
+
+def rs232_checksum(the_bytes):
+    '''
+    Returns an 8-bit checksum. This checksum has the property that once it is
+    appended to the message, the checksum computed over the new message is 0
+    (which makes for an easy error detection algorithm)
+    https://stackoverflow.com/questions/44611057/checksum-generation-from-sum-of-bits-in-python
+    --------
+    Arguments:
+        the_bytes : list of byte
+            The bytes to compute the checksum with
+    '''
+    trunc_sum = sum(the_bytes) & 0xFF
+    return struct.pack('<B', (255 - trunc_sum + 1) % 256)
