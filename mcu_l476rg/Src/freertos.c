@@ -1,21 +1,21 @@
 /* USER CODE BEGIN Header */
 /**
- ******************************************************************************
- * File Name          : freertos.c
- * Description        : Code for freertos applications
- ******************************************************************************
- * @attention
- *
- * <h2><center>&copy; Copyright (c) 2019 STMicroelectronics.
- * All rights reserved.</center></h2>
- *
- * This software component is licensed by ST under Ultimate Liberty license
- * SLA0044, the "License"; You may not use this file except in compliance with
- * the License. You may obtain a copy of the License at:
- *                             www.st.com/SLA0044
- *
- ******************************************************************************
- */
+  ******************************************************************************
+  * File Name          : freertos.c
+  * Description        : Code for freertos applications
+  ******************************************************************************
+  * @attention
+  *
+  * <h2><center>&copy; Copyright (c) 2022 STMicroelectronics.
+  * All rights reserved.</center></h2>
+  *
+  * This software component is licensed by ST under Ultimate Liberty license
+  * SLA0044, the "License"; You may not use this file except in compliance with
+  * the License. You may obtain a copy of the License at:
+  *                             www.st.com/SLA0044
+  *
+  ******************************************************************************
+  */
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
@@ -29,11 +29,9 @@
 #include <stdbool.h>
 #include <string.h>
 #include "usart.h"
-#include "tim.h"
 #include "wwdg.h"
 #include "App/util.h"
 #include "App/table.h"
-#include "App/sensing.h"
 #include "App/rx.h"
 #include "App/Notification.h"
 #include "LSS/lss.h"
@@ -60,23 +58,19 @@
 #define BUF_STATUS   (BUF_SIZE - 2)
 #define BUF_FOOTER   (BUF_SIZE - 1)
 
-//#define PC_UART huart2
-#define PC_UART huart6
+#define PC_UART huart2
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
 static bool scheduler_has_started = false;
 /* USER CODE END Variables */
-osThreadId RxHandle;
-uint32_t RxTaskBuffer[ 128 ];
-osStaticThreadDef_t RxTaskControlBlock;
 osThreadId TxHandle;
 uint32_t TxTaskBuffer[ 128 ];
 osStaticThreadDef_t TxTaskControlBlock;
-osThreadId ImuHandle;
-uint32_t ImuTaskBuffer[ 128 ];
-osStaticThreadDef_t ImuTaskControlBlock;
+osThreadId RxHandle;
+uint32_t RxTaskBuffer[ 128 ];
+osStaticThreadDef_t RxTaskControlBlock;
 osThreadId ControlHandle;
 uint32_t ControlTaskBuffer[ 512 ];
 osStaticThreadDef_t ControlTaskControlBlock;
@@ -86,10 +80,6 @@ osTimerId CameraLEDTmrHandle;
 osStaticTimerDef_t CameraLEDTmrControlBlock;
 osMutexId TableLockHandle;
 osStaticMutexDef_t TableLockControlBlock;
-osSemaphoreId LampSemHandle;
-osStaticSemaphoreDef_t LampSemControlBlock;
-osSemaphoreId BaseSemHandle;
-osStaticSemaphoreDef_t BaseSemControlBlock;
 osSemaphoreId TxSemHandle;
 osStaticSemaphoreDef_t TxSemControlBlock;
 osSemaphoreId RxSemHandle;
@@ -163,9 +153,8 @@ bool thread_is_enabled(){
 }
 /* USER CODE END FunctionPrototypes */
 
-void StartRxTask(void const * argument);
 void StartTxTask(void const * argument);
-void StartImuTask(void const * argument);
+void StartRxTask(void const * argument);
 void StartControlTask(void const * argument);
 void StatusLEDTmrCallback(void const * argument);
 void CameraLEDTmrCallback(void const * argument);
@@ -223,14 +212,6 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE END RTOS_MUTEX */
 
   /* Create the semaphores(s) */
-  /* definition and creation of LampSem */
-  osSemaphoreStaticDef(LampSem, &LampSemControlBlock);
-  LampSemHandle = osSemaphoreCreate(osSemaphore(LampSem), 1);
-
-  /* definition and creation of BaseSem */
-  osSemaphoreStaticDef(BaseSem, &BaseSemControlBlock);
-  BaseSemHandle = osSemaphoreCreate(osSemaphore(BaseSem), 1);
-
   /* definition and creation of TxSem */
   osSemaphoreStaticDef(TxSem, &TxSemControlBlock);
   TxSemHandle = osSemaphoreCreate(osSemaphore(TxSem), 1);
@@ -263,17 +244,13 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* definition and creation of Rx */
-  osThreadStaticDef(Rx, StartRxTask, osPriorityRealtime, 0, 128, RxTaskBuffer, &RxTaskControlBlock);
-  RxHandle = osThreadCreate(osThread(Rx), NULL);
-
   /* definition and creation of Tx */
   osThreadStaticDef(Tx, StartTxTask, osPriorityHigh, 0, 128, TxTaskBuffer, &TxTaskControlBlock);
   TxHandle = osThreadCreate(osThread(Tx), NULL);
 
-  /* definition and creation of Imu */
-  osThreadStaticDef(Imu, StartImuTask, osPriorityNormal, 0, 128, ImuTaskBuffer, &ImuTaskControlBlock);
-  ImuHandle = osThreadCreate(osThread(Imu), NULL);
+  /* definition and creation of Rx */
+  osThreadStaticDef(Rx, StartRxTask, osPriorityRealtime, 0, 128, RxTaskBuffer, &RxTaskControlBlock);
+  RxHandle = osThreadCreate(osThread(Rx), NULL);
 
   /* definition and creation of Control */
   osThreadStaticDef(Control, StartControlTask, osPriorityNormal, 0, 512, ControlTaskBuffer, &ControlTaskControlBlock);
@@ -283,6 +260,56 @@ void MX_FREERTOS_Init(void) {
     /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
 
+}
+
+/* USER CODE BEGIN Header_StartTxTask */
+/**
+ * @brief Function implementing the Tx thread.
+ * @param argument: Not used
+ * @retval None
+ */
+/* USER CODE END Header_StartTxTask */
+void StartTxTask(void const * argument)
+{
+  /* USER CODE BEGIN StartTxTask */
+    // For packet timing management
+    static const uint32_t TX_CYCLE_TIME = osKernelSysTickMicroSec(TX_PERIOD_MS * 1000);
+
+    uint8_t status;
+    uint8_t buf[BUF_SIZE] = {0};
+    buf[BUF_HEADER_1] = 0xAA; // 0b10101010
+    buf[BUF_HEADER_2] = 0xAA;
+    buf[BUF_FOOTER] = '\n'; // Termination character
+
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+    for (;;)
+    {
+        osDelayUntil(&xLastWakeTime, TX_CYCLE_TIME);
+        HAL_WWDG_Refresh(&hwwdg);
+
+        // Pack data
+        read_table(TABLE_IDX_BASE_DATA, (uint8_t*)&buf[BUF_BASE_IMU], sizeof(imu_data_t));
+        read_table(TABLE_IDX_LAMP_DATA, (uint8_t*)&buf[BUF_LAMP_IMU], sizeof(imu_data_t));
+
+        // Add camera synch flag if needed
+        status = 0;
+        status |= get_camera_led_state();
+        buf[BUF_STATUS] = status;
+
+        // Send
+        if (HAL_UART_Transmit_DMA(&PC_UART, buf, sizeof(buf)) != HAL_OK)
+        {
+            HAL_UART_AbortTransmit_IT(&PC_UART);
+        }
+        else
+        {
+            // BUF_SIZE = 52 bytes = 52*8 = 416 bits
+            // 115200 symbols/sec => 115200*8/10 = 92160 bps
+            // 416 bits / 92160 bps = 4.55 ms
+            xSemaphoreTake(TxSemHandle, pdMS_TO_TICKS(5));
+        }
+    }
+  /* USER CODE END StartTxTask */
 }
 
 /* USER CODE BEGIN Header_StartRxTask */
@@ -329,7 +356,7 @@ void StartRxTask(void const * argument)
     for(;;)
     {
         osDelayUntil(&xLastWakeTime, RX_CYCLE_TIME);
-        circ_buff.iHead = circ_buff.size - PC_UART.hdmarx->Instance->NDTR;
+        circ_buff.iHead = circ_buff.size - PC_UART.hdmarx->Instance->CNDTR;
         while(circ_buff.iHead != circ_buff.iTail)
         {
             uint8_t data = pop(&circ_buff);
@@ -456,100 +483,6 @@ void StartRxTask(void const * argument)
   /* USER CODE END StartRxTask */
 }
 
-/* USER CODE BEGIN Header_StartTxTask */
-/**
- * @brief Function implementing the Tx thread.
- * @param argument: Not used
- * @retval None
- */
-/* USER CODE END Header_StartTxTask */
-void StartTxTask(void const * argument)
-{
-  /* USER CODE BEGIN StartTxTask */
-    // For packet timing management
-    static const uint32_t TX_CYCLE_TIME = osKernelSysTickMicroSec(TX_PERIOD_MS * 1000);
-
-    uint8_t status;
-    uint8_t buf[BUF_SIZE] = {0};
-    buf[BUF_HEADER_1] = 0xAA; // 0b10101010
-    buf[BUF_HEADER_2] = 0xAA;
-    buf[BUF_FOOTER] = '\n'; // Termination character
-
-    TickType_t xLastWakeTime = xTaskGetTickCount();
-    for (;;)
-    {
-        osDelayUntil(&xLastWakeTime, TX_CYCLE_TIME);
-        HAL_WWDG_Refresh(&hwwdg);
-
-        // Pack data
-        read_table(TABLE_IDX_BASE_DATA, (uint8_t*)&buf[BUF_BASE_IMU], sizeof(imu_data_t));
-        read_table(TABLE_IDX_LAMP_DATA, (uint8_t*)&buf[BUF_LAMP_IMU], sizeof(imu_data_t));
-
-        // Add camera synch flag if needed
-        status = 0;
-        status |= get_camera_led_state();
-        buf[BUF_STATUS] = status;
-
-        // Send
-        if (HAL_UART_Transmit_DMA(&PC_UART, buf, sizeof(buf)) != HAL_OK)
-        {
-            HAL_UART_AbortTransmit_IT(&PC_UART);
-        }
-        else
-        {
-            // BUF_SIZE = 52 bytes = 52*8 = 416 bits
-            // 115200 symbols/sec => 115200*8/10 = 92160 bps
-            // 416 bits / 92160 bps = 4.55 ms
-            xSemaphoreTake(TxSemHandle, pdMS_TO_TICKS(5));
-        }
-    }
-  /* USER CODE END StartTxTask */
-}
-
-/* USER CODE BEGIN Header_StartImuTask */
-/**
-* @brief Function implementing the Imu thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_StartImuTask */
-void StartImuTask(void const * argument)
-{
-  /* USER CODE BEGIN StartImuTask */
-    while (!thread_is_enabled())
-    {
-        continue;
-    }
-
-    static const uint32_t IMU_CYCLE_TIME = osKernelSysTickMicroSec(IMU_CYCLE_MS * 1000);
-
-    imu_data_t imu_data;
-    mpu6050_attach_semaphore(&imu_lamp, LampSemHandle);
-    mpu6050_attach_semaphore(&imu_base, BaseSemHandle);
-
-    TickType_t xLastWakeTime = xTaskGetTickCount();
-    osDelay(TX_PERIOD_MS - 2);
-    for(;;)
-    {
-        osDelayUntil(&xLastWakeTime, IMU_CYCLE_TIME);
-        if (!thread_is_enabled())
-        {
-            continue;
-        }
-
-        mpu6050_read_accel(&imu_lamp);
-        mpu6050_read_gyro(&imu_lamp);
-        imu_data = mpu6050_get_data(&imu_lamp);
-        write_table(TABLE_IDX_LAMP_DATA, (uint8_t*)&imu_data, sizeof(imu_data_t));
-
-        mpu6050_read_accel(&imu_base);
-        mpu6050_read_gyro(&imu_base);
-        imu_data = mpu6050_get_data(&imu_base);
-        write_table(TABLE_IDX_BASE_DATA, (uint8_t*)&imu_data, sizeof(imu_data_t));
-    }
-  /* USER CODE END StartImuTask */
-}
-
 /* USER CODE BEGIN Header_StartControlTask */
 /**
 * @brief Function implementing the Control thread.
@@ -645,44 +578,6 @@ void CameraLEDTmrCallback(void const * argument)
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
-void HAL_WWDG_EarlyWakeupCallback(WWDG_HandleTypeDef *hwwdg)
-{
-    // Watchdog wants to reset
-    // Check if I2C is frozen, if so, try to software-reset it. Otherwise, let
-    // the reset occur.
-    bool reset_lamp = false, reset_base = false;
-    static uint32_t last_tick_entry = 0;
-    uint32_t cur_tick = HAL_GetTick();
-    if (imu_lamp.hi2c->State != HAL_I2C_STATE_READY ||
-        __HAL_I2C_GET_FLAG(imu_lamp.hi2c, I2C_FLAG_BUSY) != RESET)
-    {
-        SET_BIT(imu_lamp.hi2c->Instance->CR1, I2C_CR1_SWRST);
-        asm("nop");
-        CLEAR_BIT(imu_lamp.hi2c->Instance->CR1, I2C_CR1_SWRST);
-        asm("nop");
-        reset_lamp = true;
-    }
-    if (imu_base.hi2c->State != HAL_I2C_STATE_READY ||
-        __HAL_I2C_GET_FLAG(imu_base.hi2c, I2C_FLAG_BUSY) != RESET)
-    {
-        SET_BIT(imu_base.hi2c->Instance->CR1, I2C_CR1_SWRST);
-        asm("nop");
-        CLEAR_BIT(imu_base.hi2c->Instance->CR1, I2C_CR1_SWRST);
-        asm("nop");
-        reset_base = true;
-    }
-    if ((cur_tick - last_tick_entry > 20) && (reset_lamp || reset_base))
-    {
-        // Seems like an I2C driver issue was causing the blockage. As long as
-        // this is happening infrequently, the SWRST above should recover it.
-        // The acceptable time difference above must be greater than the Watchdog
-        // time; otherwise, it could mean that we are only here again because
-        // the previous recovery attempt did not work.
-        HAL_WWDG_Refresh(hwwdg);
-    }
-    last_tick_entry = cur_tick;
-}
-
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
     if (scheduler_has_started)
@@ -715,36 +610,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
         BaseType_t xHigherPriorityTaskWoken = pdFALSE;
         if (huart->Instance == PC_UART.Instance && RxSemHandle != NULL){
             xSemaphoreGiveFromISR(RxSemHandle, &xHigherPriorityTaskWoken);
-        }
-        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-    }
-}
-
-void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c){
-    if (scheduler_has_started)
-    {
-        // Returns the semaphore taken after non-blocking reception ends
-        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-        if (hi2c->Instance == I2C3){
-            xSemaphoreGiveFromISR(LampSemHandle, &xHigherPriorityTaskWoken);
-        }
-        else if (hi2c->Instance == I2C1){
-            xSemaphoreGiveFromISR(BaseSemHandle, &xHigherPriorityTaskWoken);
-        }
-        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-    }
-}
-
-void HAL_I2C_MemTxCpltCallback(I2C_HandleTypeDef *hi2c){
-    if (scheduler_has_started)
-    {
-        // Returns the semaphore taken after non-blocking transmission ends
-        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-        if (hi2c->Instance == I2C3){
-            xSemaphoreGiveFromISR(LampSemHandle, &xHigherPriorityTaskWoken);
-        }
-        else if (hi2c->Instance == I2C1){
-            xSemaphoreGiveFromISR(BaseSemHandle, &xHigherPriorityTaskWoken);
         }
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
     }

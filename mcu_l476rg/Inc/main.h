@@ -7,7 +7,7 @@
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; Copyright (c) 2019 STMicroelectronics.
+  * <h2><center>&copy; Copyright (c) 2022 STMicroelectronics.
   * All rights reserved.</center></h2>
   *
   * This software component is licensed by ST under Ultimate Liberty license
@@ -28,8 +28,7 @@ extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
-#include "stm32f4xx_hal.h"
-#include "stm32f4xx_hal.h"
+#include "stm32l4xx_hal.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -60,39 +59,24 @@ void Error_Handler(void);
 
 /* Private defines -----------------------------------------------------------*/
 #define TX_PERIOD_MS 10
-#define IMU_CYCLE_MS 10
 #define CONTROL_CYCLE_MS 10
 #define B1_Pin GPIO_PIN_13
 #define B1_GPIO_Port GPIOC
 #define B1_EXTI_IRQn EXTI15_10_IRQn
 #define CAMERA_LED_Pin GPIO_PIN_1
 #define CAMERA_LED_GPIO_Port GPIOC
-#define SERVO_OUTER_Pin GPIO_PIN_0
-#define SERVO_OUTER_GPIO_Port GPIOA
-#define SERVO_INNER_Pin GPIO_PIN_1
-#define SERVO_INNER_GPIO_Port GPIOA
 #define USART_TX_Pin GPIO_PIN_2
 #define USART_TX_GPIO_Port GPIOA
 #define USART_RX_Pin GPIO_PIN_3
 #define USART_RX_GPIO_Port GPIOA
 #define LD2_Pin GPIO_PIN_5
 #define LD2_GPIO_Port GPIOA
-#define IMU_LAMP_SDA_Pin GPIO_PIN_9
-#define IMU_LAMP_SDA_GPIO_Port GPIOC
-#define IMU_LAMP_SCL_Pin GPIO_PIN_8
-#define IMU_LAMP_SCL_GPIO_Port GPIOA
-#define AX12A_DIR_Pin GPIO_PIN_11
-#define AX12A_DIR_GPIO_Port GPIOA
 #define TMS_Pin GPIO_PIN_13
 #define TMS_GPIO_Port GPIOA
 #define TCK_Pin GPIO_PIN_14
 #define TCK_GPIO_Port GPIOA
 #define SWO_Pin GPIO_PIN_3
 #define SWO_GPIO_Port GPIOB
-#define IMU_BASE_SCL_Pin GPIO_PIN_6
-#define IMU_BASE_SCL_GPIO_Port GPIOB
-#define IMU_BASE_SDA_Pin GPIO_PIN_7
-#define IMU_BASE_SDA_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
