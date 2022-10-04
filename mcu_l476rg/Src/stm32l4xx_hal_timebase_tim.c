@@ -1,12 +1,12 @@
 /* USER CODE BEGIN Header */
 /**
   ******************************************************************************
-  * @file    stm32f4xx_hal_timebase_TIM.c 
+  * @file    stm32l4xx_hal_timebase_TIM.c 
   * @brief   HAL time base based on the hardware TIM.
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; Copyright (c) 2019 STMicroelectronics.
+  * <h2><center>&copy; Copyright (c) 2022 STMicroelectronics.
   * All rights reserved.</center></h2>
   *
   * This software component is licensed by ST under Ultimate Liberty license
@@ -19,8 +19,8 @@
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
-#include "stm32f4xx_hal.h"
-#include "stm32f4xx_hal_tim.h"
+#include "stm32l4xx_hal.h"
+#include "stm32l4xx_hal_tim.h"
  
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -47,10 +47,10 @@ HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority)
   uint32_t              pFLatency;
   
   /*Configure the TIM1 IRQ priority */
-  HAL_NVIC_SetPriority(TIM1_UP_TIM10_IRQn, TickPriority ,0); 
+  HAL_NVIC_SetPriority(TIM1_UP_TIM16_IRQn, TickPriority ,0); 
   
   /* Enable the TIM1 global Interrupt */
-  HAL_NVIC_EnableIRQ(TIM1_UP_TIM10_IRQn); 
+  HAL_NVIC_EnableIRQ(TIM1_UP_TIM16_IRQn); 
   
   /* Enable TIM1 clock */
   __HAL_RCC_TIM1_CLK_ENABLE();
@@ -59,7 +59,7 @@ HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority)
   HAL_RCC_GetClockConfig(&clkconfig, &pFLatency);
   
   /* Compute TIM1 clock */
-  uwTimclock = 2*HAL_RCC_GetPCLK2Freq();
+  uwTimclock = HAL_RCC_GetPCLK2Freq();
    
   /* Compute the prescaler value to have TIM1 counter clock equal to 1MHz */
   uwPrescalerValue = (uint32_t) ((uwTimclock / 1000000) - 1);
