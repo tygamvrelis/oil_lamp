@@ -132,18 +132,6 @@ void disable_control()
     xTaskNotify((TaskHandle_t)ControlHandle, NOTIFY_THREAD_DI, eSetBits);
 }
 
-/** @brief Enables the sensing (IMUs) thread */
-void enable_sensing()
-{
-    xTaskNotify((TaskHandle_t)ImuHandle, NOTIFY_CLEAR, eSetValueWithOverwrite);
-}
-
-/** @brief Disables the sensing (IMUs) thread */
-void disable_sensing()
-{
-    xTaskNotify((TaskHandle_t)ImuHandle, NOTIFY_THREAD_DI, eSetBits);
-}
-
 /** @brief Returns true if the current thread is enabled, otherwise false */
 bool thread_is_enabled(){
     uint32_t ulNotifiedValue;
@@ -351,7 +339,6 @@ void StartRxTask(void const * argument)
 
     MX_WWDG_Init();
     enable_control();
-    disable_sensing();
     HAL_UART_Receive_DMA(&PC_UART, rx_buff, sizeof(rx_buff));
     for(;;)
     {
@@ -430,10 +417,10 @@ void StartRxTask(void const * argument)
                             enable_control();
                             break;
                         case CMD_SENS_DI:
-                            disable_sensing();
+//                            disable_sensing();
                             break;
                         case CMD_SENS_EN:
-                            enable_sensing();
+//                            enable_sensing();
                             break;
                         case CMD_ANGLE:
                             // Outer
