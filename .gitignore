@@ -91,7 +91,7 @@ tmp/
 #.classpath
 
 # STM Microelectronics stuff
-**/Debug/
+# **/Debug/
 **/Build/
 **/output.map
 RemoteSystemsTempFiles/
